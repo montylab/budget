@@ -58,7 +58,7 @@ export default class ComeService {
       amount: 0,
       description: '',
       category: 'unknown',
-      date: +new Date(),
+      date: dateService.endOfSelectedMonth(),
       id: id
     }
     Vue.set(this.data.items, id, item)

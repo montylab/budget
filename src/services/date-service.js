@@ -67,5 +67,15 @@ export default {
 	},
 	fromTimestamp(date, format) {
 		return moment(date).format(format);
-	}
+	},
+
+  endOfSelectedMonth(){
+	  const date = new Date(0)
+    date.setFullYear(this.selected.year)
+    date.setMonth(this.selected.month)
+    date.setDate(1)
+    date.setHours(0)
+
+	  return date-1
+  }
 }
