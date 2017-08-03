@@ -6,8 +6,8 @@
     <app-chart-summary/>
     <app-chart-in-out/>
     <div class="flexGroup">
-      <!--<app-chart-category-pie :service="outcomeService" :title="'Outcome'"/>-->
-      <!--<app-chart-category-pie :service="incomeService" :title="'Income'"/>-->
+      <app-chart-category-pie :service="outcomeService" :title="'Outcome'"/>
+      <app-chart-category-pie :service="incomeService" :title="'Income'"/>
     </div>
   </div>
 </template>
