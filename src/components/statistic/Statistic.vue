@@ -25,6 +25,9 @@
     },
 
     created() {
+      console.log("started11t")
+      console.info("default")
+
     },
 
     mounted() {
