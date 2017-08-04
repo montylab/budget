@@ -1,10 +1,11 @@
 <template>
     <div class="signin-widget">
         <h2>
-            Choose the pill, Neo
+            Looks like you have no choice : )
         </h2>
+        <br>
         <button class="btn google" @click="google">Google</button>
-        <button class="btn facebook" @click="facebook">Facebook</button>
+        <!--<button class="btn facebook" @click="facebook">Facebook</button>-->
     </div>
 </template>
 

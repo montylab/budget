@@ -55,7 +55,8 @@
       return {
         items: [],
         categories: [],
-        selectedDate: dateService.getMonthTimestamps()
+        //selectedDate: dateService.getMonthTimestamps()
+        selectedDate: dateService.current
       }
     },
 

@@ -9,8 +9,8 @@
 </template>
 
 <script>
-    import incomeService from '@/services/income-service'
-    import outcomeService from '@/services/outcome-service'
+  import incomeService from '@/services/income-service'
+  import outcomeService from '@/services/outcome-service'
 
 	export default {
 		name: 'dashboard',

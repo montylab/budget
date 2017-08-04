@@ -64,7 +64,7 @@
 <template>
     <tr>
         <td>
-            <input type="text" class="amount" v-model="item.amount" @change="changed">
+            <input type="text" class="amount" v-model="item.amount" @change="moneyChanged">
         </td>
         <td>
             <input type="text" v-model="item.description" @change="changed">
@@ -86,6 +86,7 @@
 	import Pikaday from '@/libs/pikaday';
 	import dateService from '@/services/date-service';
 	import authService from '@/services/auth-service';
+	import currencyService from '@/services/currency-service';
 	import Awesomplete from '@/libs/awesomplete';
 
 	export default {
@@ -127,6 +128,17 @@
 				this.item.date = dateService.toTimestamp(val, 'DD.MM.YYYY');
 				this.changed();
 			},
+
+      moneyChanged: function () {
+			  let amount = parseFloat(this.item.amount)
+        if (this.item.amount.indexOf('$') != -1) {
+			    this.item.amount = amount.toFixed(1)
+        } else {
+			    this.item.amount =  (amount / currencyService.getCurrencyRate()).toFixed(1)
+        }
+
+			  this.changed()
+      },
 
 			changed: function () {
 				this.item.category = this.$el.querySelector('.dropdown-input').value;
