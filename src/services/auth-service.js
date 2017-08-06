@@ -1,5 +1,6 @@
 import * as firebase from 'firebase';
 import Vue from 'vue'
+import settingsService from './settings-service';
 
 const config = {
 	apiKey: "AIzaSyAiosYDEN9e8PwUyNotnUD5YMqBHQmkiKY",
@@ -20,12 +21,14 @@ export default {
 	init: function () {
 		firebase.initializeApp(config)
 		this.initialized = true
-		
-		firebase.auth().onAuthStateChanged((user) => {
-			this.user = user;
-			this.token = user && user.Yd;
 
-			this.events.$emit('authStateChanged', user);
+		firebase.auth().onAuthStateChanged((user) => {
+			this.user = user
+			this.token = user && user.Yd
+
+      settingsService.dbFetch()
+
+			this.events.$emit('authStateChanged', user)
 		});
 	},
 
@@ -57,5 +60,5 @@ export default {
 		}).catch(function (error) {
 			console.error(error);
 		});
-	},
+	}
 }

@@ -3,10 +3,10 @@
 import Vue from 'vue'
 import router from './router'
 
-
 import App from './App'
 import Header from '@/components/Header'
 import Calendar from '@/components/Calendar'
+import Settings from '@/components/Settings'
 
 import SummaryChart from '@/components/Statistic/SummaryChart'
 import InOutChart from '@/components/Statistic/InOutChart.vue'
@@ -17,10 +17,12 @@ import DatasheetItem from '@/components/datasheet/item'
 
 import * as firebase from 'firebase'
 
-import authService from '@/services/auth-service'
+import authService from './services/auth-service'
+import currencyService from './services/currency-service'
 
 Vue.component('app-header', Header)
 Vue.component('app-calendar-widget', Calendar)
+Vue.component('app-settings-widget', Settings)
 Vue.component('app-datasheet-widget', Datasheet)
 Vue.component('app-datasheet-item',   DatasheetItem)
 
@@ -41,10 +43,11 @@ new Vue({
 	components: {
 		App,
 		Calendar,
+    Settings,
 
 		Datasheet,
 		DatasheetItem,
-		
+
 		SummaryChart,
 		InOutChart,
 		CategoryPieChart
@@ -53,4 +56,6 @@ new Vue({
 
 
 // Initialize Firebase & Auth
-authService.init();
+authService.init()
+currencyService.fetchCurrencyRate()
+

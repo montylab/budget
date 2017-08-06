@@ -47,7 +47,6 @@ export default class ComeService {
         })
       }
     }
-    console.log(filteredArray);
     filteredArray.sort((a, b) => a.date - b.date)
     return filteredArray
   }

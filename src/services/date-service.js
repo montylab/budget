@@ -14,6 +14,8 @@ export default {
 		month: null
 	},
 
+
+
 	changeSelected: function (year, month) {
 		this.selected.year = +year;
 		this.selected.month = +month;
@@ -30,15 +32,19 @@ export default {
 			year = this.current.year;
 		}
 
-		const start = +moment('01-'+month+'-'+year, "DD-MM-YYYY")._d;
-		month = month+1 < 13 ? month+1 : 1;
-		const end = +moment('01-'+month+'-'+year, "DD-MM-YYYY")._d;
+    const start = +moment('01-'+this.zeroify(month)+'-'+year, "DD-MM-YYYY")._d;
+		month = +month + 1 < 13 ? +month +1 : 1
+		const end = +moment('01-'+this.zeroify(month)+'-'+year, "DD-MM-YYYY")._d;
 
 		return {
 			start: start,
 			end: end
 		}
 	},
+
+  zeroify(x) {
+	  return (+x) < 10 ? "0"+ +x : x
+  },
 
 	getYearTimestamps(year) {
 		return {

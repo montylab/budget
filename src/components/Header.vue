@@ -1,62 +1,64 @@
 <template>
-    <div class="header">
-        <div class="wrapper">
-            <router-link to="/">Dashboard</router-link>
-            <router-link to="/stat">Statistics</router-link>
-            <router-link to="/settings">Settings</router-link>
+  <div class="header">
+    <div class="wrapper">
+      <router-link to="/">Dashboard</router-link>
+      <router-link to="/stat">Statistics</router-link>
+      <router-link to="/settings">Settings</router-link>
 
-            <div class="right">
-                {{userAuthorized}}
-                <router-link to="/signin" v-if="!userAuthorized">Sign in</router-link>
-            </div>
-        </div>
+      <div class="right">
+        <router-link to="/signin" v-if="!userAuthorized">Sign in</router-link>
+        <h3 v-if="userAuthorized">{{username}}</h3>
+      </div>
     </div>
+  </div>
 </template>
 
 <script>
-	import authService from '@/services/auth-service.js';
+  import authService from '@/services/auth-service.js';
 
-	export default {
-		name: 'header',
-        created: function () {
-			authService.events.$on('authStateChanged', user => {
-				this.$data.userAuthorized = !!user;
-            });
-        },
+  export default {
+    name: 'header',
+    created: function() {
+      authService.events.$on('authStateChanged', user => {
+        this.$data.userAuthorized = !!user
+        this.$data.username = user.displayName
+      });
+    },
 
-        methods: {
+    methods: {},
 
-        },
-
-		data () {
-			return {
-				userAuthorized: false
-			}
-		}
-	}
+    data() {
+      return {
+        userAuthorized: false,
+        username: null
+      };
+    },
+  };
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-    a {
-        color: #222;
-        font-size: 18px;
-        text-decoration: none;
-        margin-right:  40px;
-    }
+  a {
+    color: #222;
+    font-size: 18px;
+    text-decoration: none;
+    margin-right: 40px;
+  }
 
-    .right a {
-        margin: 0 0 0 40px;
-    }
+  .right a {
+    margin: 0 0 0 40px;
+  }
 
-    .header {
-        height: 60px;
-        line-height: 60px;
-        background: #FFF;
-        margin-bottom: 40px;
-    }
+  .header {
+    height: 60px;
+    line-height: 60px;
+    background: #FFF;
+    margin-bottom: 40px;
+  }
 
-    .right {
-        margin: 0 0 0 auto;
-    }
+  .right {
+    margin: 0 0 0 auto;
+    display: flex;
+    align-items: center
+  }
 </style>
