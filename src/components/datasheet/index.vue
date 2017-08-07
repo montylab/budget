@@ -51,32 +51,32 @@
     name: 'app-datasheet-widget',
     props: ['service', 'title'],
 
-    data: function () {
+    data: function() {
       return {
         items: [],
         categories: [],
         //selectedDate: dateService.getMonthTimestamps()
-        selectedDate: dateService.current
-      }
+        selectedDate: dateService.current,
+      };
     },
 
-    created: function () {
+    created: function() {
       this.service.events.$on('updated', (data) => {
-        this.$data.items = this.service.getItemsArray(this.$data.selectedDate)
+        this.$data.items = this.service.getItemsArray(this.$data.selectedDate);
         this.$data.categories = data.categories;
       });
 
       dateService.events.$on('selectedChanged', (selected) => {
-        this.$data.selectedDate = selected
-        this.$data.items = this.service.getItemsArray(selected)
-      })
+        this.$data.selectedDate = selected;
+        this.$data.items = this.service.getItemsArray(selected);
+      });
 
-      this.$data.items = this.service.getItemsArray(this.$data.selectedDate)
-      this.$data.categories = this.service.getCategories()
+      this.$data.items = this.service.getItemsArray(this.$data.selectedDate);
+      this.$data.categories = this.service.getCategories();
     },
 
     methods: {
-      newItem: function () {
+      newItem: function() {
         this.service.addNewItem();
         setTimeout(() => {
           const inputs = this.$el.querySelectorAll('input.amount');
@@ -84,8 +84,8 @@
             inputs[inputs.length - 1].focus();
           }
         }, 0);
-      }
-    }
-  }
+      },
+    },
+  };
 </script>
 
