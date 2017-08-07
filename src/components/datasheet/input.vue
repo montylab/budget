@@ -7,6 +7,12 @@
     props: ['categories', 'description', 'category'],
 
     mounted: function() {
+      window.aaa = (n) => {
+        setTimeout(() => {
+          this.setCursorAbsoluteIndex(n);
+        }, 2000);
+      };
+
       this.interpolate();
     },
 
@@ -23,10 +29,9 @@
         console.log(this.getCursorAbsoluteIndex());
 
         this.$set(this.input, 'cursor', {
-            offset: this.getCursorAbsoluteIndex(),
-            blur: e.type === 'blur',
-          })
-
+          offset: this.getCursorAbsoluteIndex(),
+          blur: e.type === 'blur',
+        });
 
         const value = e.target.innerText.replace(/\u00A0| /gim, ' ');
         //console.info(value);
@@ -59,13 +64,13 @@
 
         this.$refs.textfield.innerHTML = template;
 
-        this.setCursorAbsoluteIndex(offset)
+        this.setCursorAbsoluteIndex(offset);
 
         //if (!blur) div.focus()
       },
 
       getCursorAbsoluteIndex: function() {
-        if (!document.getSelection().anchorNode) return
+        if (!document.getSelection().anchorNode) return;
 
         const cursorParent = document.getSelection().anchorNode.parentNode;
         let offset = document.getSelection().anchorOffset;
@@ -84,12 +89,14 @@
       },
 
       setCursorAbsoluteIndex: function(index) {
-        let node = null, offset = null
-        this.$el.childNodes.forEach((item) => {
+
+        let node = null, offset = null;
+
+        Array.from(this.$el.childNodes).every((item) => {
           if (item.childNodes && item.childNodes[0]) {
             const len = item.childNodes[0].length;
-            console.log(len, item.childNodes)
-            if (len > index) {
+            console.log(len, item.childNodes);
+            if (len >= index) {
               node = item.childNodes[0];
               offset = index;
               return false;
@@ -97,23 +104,26 @@
               index -= len;
               node = item.childNodes[0];
             }
+
+            return true;
           }
         });
 
         if (node && offset !== null) {
-          const range = new Range()
+          const range = new Range();
           range.setStart(node, offset);
           range.setEnd(node, offset);
           const sel = window.getSelection();
           sel.removeAllRanges();
           sel.addRange(range);
+
+          this.$el.focus();
+
         }
-
       },
-    },
+  },
 
-  data()
-  {
+  data: function() {
     return {
       input: {
         category: 'lol:kek',

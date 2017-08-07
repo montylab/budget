@@ -2,6 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="63ebfa40-6224-47f6-880a-c9815bb0ddd6" name="Default" comment="">
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.gitignore" afterPath="$PROJECT_DIR$/.gitignore" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/components/datasheet/input.vue" afterPath="$PROJECT_DIR$/src/components/datasheet/input.vue" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -13,15 +15,25 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="input.vue" pinned="false" current-in-tab="true">
+      <file leaf-file-name="input.vue" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/components/datasheet/input.vue">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="347">
-              <caret line="97" column="40" lean-forward="false" selection-start-line="97" selection-start-column="40" selection-end-line="97" selection-end-column="40" />
+            <state relative-caret-position="359">
+              <caret line="98" column="22" lean-forward="false" selection-start-line="98" selection-start-column="22" selection-end-line="98" selection-end-column="22" />
               <folding>
-                <marker date="1502117649000" expanded="true" signature="1229:1235" ph=" " />
-                <marker date="1502117649000" expanded="true" signature="1370:1376" ph=" " />
+                <marker date="1502122443000" expanded="true" signature="1348:1354" ph=" " />
+                <marker date="1502122443000" expanded="true" signature="1489:1495" ph=" " />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name=".gitignore" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/.gitignore">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="15">
+              <caret line="1" column="6" lean-forward="false" selection-start-line="1" selection-start-column="6" selection-end-line="1" selection-end-column="6" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -41,6 +53,7 @@
     <option name="CHANGED_PATHS">
       <list>
         <option value="$PROJECT_DIR$/src/components/datasheet/input.vue" />
+        <option value="$PROJECT_DIR$/.gitignore" />
       </list>
     </option>
   </component>
@@ -92,30 +105,6 @@
               <item name="budget" type="b2602c69:ProjectViewProjectNode" />
               <item name="budget" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="budget" type="b2602c69:ProjectViewProjectNode" />
-              <item name="budget" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="budget" type="b2602c69:ProjectViewProjectNode" />
-              <item name="budget" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="components" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="budget" type="b2602c69:ProjectViewProjectNode" />
-              <item name="budget" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="components" type="462c0819:PsiDirectoryNode" />
-              <item name="datasheet" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="budget" type="b2602c69:ProjectViewProjectNode" />
-              <item name="budget" type="462c0819:PsiDirectoryNode" />
-              <item name="src" type="462c0819:PsiDirectoryNode" />
-              <item name="services" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
@@ -165,12 +154,12 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1502111388544</updated>
-      <workItem from="1502111390816" duration="4998000" />
+      <workItem from="1502111390816" duration="7231000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="4998000" />
+    <option name="totallyTimeSpent" value="7231000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="23" width="1920" height="1113" extended-state="0" />
@@ -236,12 +225,20 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/src/components/datasheet/input.vue">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="347">
-          <caret line="97" column="40" lean-forward="false" selection-start-line="97" selection-start-column="40" selection-end-line="97" selection-end-column="40" />
+        <state relative-caret-position="359">
+          <caret line="98" column="22" lean-forward="false" selection-start-line="98" selection-start-column="22" selection-end-line="98" selection-end-column="22" />
           <folding>
-            <marker date="1502117649000" expanded="true" signature="1229:1235" ph=" " />
-            <marker date="1502117649000" expanded="true" signature="1370:1376" ph=" " />
+            <marker date="1502122443000" expanded="true" signature="1348:1354" ph=" " />
+            <marker date="1502122443000" expanded="true" signature="1489:1495" ph=" " />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/.gitignore">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="15">
+          <caret line="1" column="6" lean-forward="false" selection-start-line="1" selection-start-column="6" selection-end-line="1" selection-end-column="6" />
+          <folding />
         </state>
       </provider>
     </entry>
