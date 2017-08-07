@@ -6,106 +6,138 @@
     name: 'app-datasheet-input',
     props: ['categories', 'description', 'category'],
 
-    mounted: function () {
-      this.interpolate()
+    mounted: function() {
+      this.interpolate();
     },
 
-    updated: function () {
-      //this.interpolate()
-//      if (spans.length !== 2) {
-//        //div.innerHTML =     '<span class="category">{{input.category}}</span> <span class="description">{{input.description}}</span>'
-//        if (cnt < 100) {
-//          this.$forceUpdate();
-//          this.$nextTick(()=>{console.log('upd')})
-//
-//        }
-//        cnt ++
-//      }
+    updated: function() {
+
     },
 
     methods: {
-      change: function (e) {
-        if (document.getSelection().anchorNode) {
-          const cursorParent = document.getSelection().anchorNode.parentNode
-          const cursorOffset = document.getSelection().anchorOffset
-
-          this.$set(this.input, 'cursor', {
-            offset: cursorOffset,
-            parent: cursorParent.className,
-            blur: e.type === 'blur'
-          })
+      change: function(e) {
+        if (e.ctrlKey || e.shiftKey || e.altKey) {
+          return;
         }
 
-        const value = e.target.innerText.replace(/\u00A0| /gim, ' ')
-        console.info(value)
+        console.log(this.getCursorAbsoluteIndex());
 
-        const cat = value.split(' ')[0]
-        const desc = value.indexOf(' ') !== -1 ? value.slice(value.indexOf(' ') + 1) : ''
-        console.info(`|${cat}| |${desc}|`)
+        this.$set(this.input, 'cursor', {
+            offset: this.getCursorAbsoluteIndex(),
+            blur: e.type === 'blur',
+          })
+
+
+        const value = e.target.innerText.replace(/\u00A0| /gim, ' ');
+        //console.info(value);
+
+        const cat = value.split(' ')[0];
+        const desc = value.indexOf(' ') !== -1 ? value.slice(value.indexOf(' ') + 1) : '';
+        //console.info(`|${cat}| |${desc}|`);
 
         this.$set(this, 'input', {
           category: cat,
           description: desc.replace(/ /gim, '\u00A0'),
-          cursor: this.input.cursor
-        })
+          cursor: this.input.cursor,
+        });
 
-        this.interpolate()
+        this.interpolate();
       },
 
-      interpolate: function () {
-        let {cursor: {offset, parent, blur}, category, description} = this.input
+      interpolate: function() {
+        let {cursor: {offset, blur}, category, description} = this.input;
 
-        this.$refs.textfield.innerHTML = `
-          <span class="category">${category}</span><span class="sepatator"> </span><span class="description">${description}</span>
-        `
+        let template = `<span class="category">${category}</span><span class="sepatator">&nbsp;</span><span class="description">${description}</span>`;
+//        if (description) {
+//          template += `<span class="sepatator">&nbsp;</span><span class="description">${description}</span>`;
+//        }
 
-        if (parent) {
-          const parentNode = this.$el.querySelector('.'+parent)
-          if (!parentNode) return
-          let node = this.$el.querySelector('.'+parent).childNodes[0]
-          const range = document.createRange()
-
-          if (offset > node.length && parent==='category') {
-            offset = 0
-            node = this.$el.querySelector('.description')
-          }
-
-          range.setStart(node, offset)
-          range.setEnd(node, offset)
-          const sel = window.getSelection()
-          sel.removeAllRanges()
-          sel.addRange(range)
+        if (this.$refs.textfield.innerHTML === template) {
+          //console.log(this.$refs.textfield.innerHTML);
+          return;
         }
+
+        this.$refs.textfield.innerHTML = template;
+
+        this.setCursorAbsoluteIndex(offset)
 
         //if (!blur) div.focus()
-      }
-    },
+      },
 
-    data() {
-      return {
-        input: {
-          category: 'lol:kek',
-          description: 'wo1w!',
-          cursor: {
-            offset: 0,
-            parent: null,
-            blur: false
+      getCursorAbsoluteIndex: function() {
+        if (!document.getSelection().anchorNode) return
+
+        const cursorParent = document.getSelection().anchorNode.parentNode;
+        let offset = document.getSelection().anchorOffset;
+
+        let elem = cursorParent;
+        while (elem.previousSibling) {
+          elem = elem.previousSibling;
+          if (elem.childNodes.length) {
+            offset += elem.childNodes[0].length;
+          } else {
+
           }
         }
-      }
-    }
+
+        return offset;
+      },
+
+      setCursorAbsoluteIndex: function(index) {
+        let node = null, offset = null
+        this.$el.childNodes.forEach((item) => {
+          if (item.childNodes && item.childNodes[0]) {
+            const len = item.childNodes[0].length;
+            console.log(len, item.childNodes)
+            if (len > index) {
+              node = item.childNodes[0];
+              offset = index;
+              return false;
+            } else {
+              index -= len;
+              node = item.childNodes[0];
+            }
+          }
+        });
+
+        if (node && offset !== null) {
+          const range = new Range()
+          range.setStart(node, offset);
+          range.setEnd(node, offset);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+
+      },
+    },
+
+  data()
+  {
+    return {
+      input: {
+        category: 'lol:kek',
+        description: 'wo1w!',
+        cursor: {
+          offset: 0,
+          parent: null,
+          blur: false,
+        },
+      },
+    };
+  }
   }
 </script>
 
 <template>
-  <div class="categoryInput"
+  <pre class="categoryInput"
        contenteditable
        @keyup="change"
        @change="change"
        @blur="change"
        ref="textfield"
   >
-  </div>
+  </pre>
 </template>
 
 <style>
