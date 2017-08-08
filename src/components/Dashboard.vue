@@ -21,22 +21,29 @@
   export default {
     components: {AppDatasheetInput},
     name: 'dashboard',
+
+	created: function () {
+		outcomeService.events.$on('updated', (data) => {
+			this.$data.categories = data.categories;
+		});
+	},
+
     data() {
       return {
         incomeService,
         outcomeService,
-		//categories: outcomeService.categories,
-        categories: [
-			'category1:sub1',
-			'category1:sub2',
-			'category1:subcategory3',
-			'category1:subcategory4',
-			'cat2:sub1',
-			'cat2:sub2',
-			'cat3subcategory3',
-			'cat3:subcategory4',
-
-		],
+		categories: outcomeService.getCategories(),
+//        categories: [
+//			'category1:sub1',
+//			'category1:sub2',
+//			'category1:subcategory3',
+//			'category1:subcategory4',
+//			'cat2:sub1',
+//			'cat2:sub2',
+//			'cat3subcategory3',
+//			'cat3:subcategory4',
+//
+//		],
         category: 'category:subcategory',
         description: 'description'
       }

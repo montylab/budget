@@ -60,7 +60,6 @@
 			},
 
 			blur: function (e) {
-				//window.clearInterval(this.watcher)
 				this.change()
 				this.hinter.style.display = 'none'
 			},
@@ -75,8 +74,6 @@
 				this.hinter.style.left = anchor.offsetLeft  + 'px'
 				this.hinter.style.top  = anchor.offsetTop   + 30 + 'px'
 
-
-
 				this.hintRender()
 			},
 
@@ -85,14 +82,15 @@
 				const text = node.textContent
 
 				console.log(text)
+				console.log(this.input.category)
+				const search = this.input.category
 
-				const cats = this.$props.categories.filter(item => item.indexOf(text) !== -1)
+				const cats = this.$props.categories.filter(item => item.indexOf(search) !== -1)
 
 				let template = '<ul>'
 //				debugger
 				template += cats.reduce((acc, item) => `${acc}<li>${item}</li>`, '')
 				template = template + '</ul>'
-
 
 				this.hinter.innerHTML = template
 			},
