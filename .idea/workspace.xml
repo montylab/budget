@@ -1,12 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="63ebfa40-6224-47f6-880a-c9815bb0ddd6" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.editorconfig" afterPath="$PROJECT_DIR$/.editorconfig" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/components/Dashboard.vue" afterPath="$PROJECT_DIR$/src/components/Dashboard.vue" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/components/datasheet/input.vue" afterPath="$PROJECT_DIR$/src/components/datasheet/input.vue" />
-    </list>
+    <list default="true" id="63ebfa40-6224-47f6-880a-c9815bb0ddd6" name="Default" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -196,12 +191,12 @@
       <option name="presentableId" value="Default" />
       <updated>1502111388544</updated>
       <workItem from="1502111390816" duration="19042000" />
-      <workItem from="1502199964110" duration="3150000" />
+      <workItem from="1502199964110" duration="3300000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="22192000" />
+    <option name="totallyTimeSpent" value="22342000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="0" y="0" width="1920" height="1200" extended-state="0" />
