@@ -8,26 +8,26 @@
 
 		mounted: function() {
 			this.interpolate()
-
-			let hinter = document.querySelector('#hinter')
-			if (!hinter) {
-				const hinterEl = document.createElement('div')
-				hinterEl.id = 'hinter'
-				document.body.appendChild(hinterEl)
-				hinter = document.querySelector('#hinter')
-			}
-
-			this.hinter = hinter
 		},
 
-
 		methods: {
+			emitChange: function(e) {
+				this.$emit('change', {
+					category: this.input.category.trim(),
+					description: this.input.description.trim(),
+				})
+			},
+
 			change: function(e) {
+				if (e && e.key === "Enter") {
+					e.preventDefault()
+				}
+
 				this.$set(this.input, 'cursor', {
 					offset: this.getCursorAbsoluteIndex(),
 				})
 
-				const value = this.$el.innerText.replace(/\u00A0| /gim, ' ')
+				const value = this.$refs.textfield.innerText.replace(/\u00A0| /gim, ' ')
 
 				let rerender = false
 				if (value !== this.input.text) {
@@ -51,50 +51,16 @@
 					this.interpolate()
 					this.setCursorAbsoluteIndex()
 				}
-				this.hinterRecalc()
 			},
 
-			focus: function (e) {
+			focus: function(e) {
 				this.change()
-				setTimeout(()=>this.hinterRecalc())
 			},
 
-			blur: function (e) {
+			blur: function(e) {
 				this.change()
-				this.hinter.style.display = 'none'
+				this.emitChange()
 			},
-
-			hinterRecalc: function () {
-				let anchor = document.getSelection().anchorNode
-				if (!anchor) return
-				anchor = anchor.nodeType === 3 ? anchor.parentNode : anchor
-				if (!anchor.closest('.'+this.$el.className)) return
-
-				this.hinter.style.display ='block'
-				this.hinter.style.left = anchor.offsetLeft  + 'px'
-				this.hinter.style.top  = anchor.offsetTop   + 30 + 'px'
-
-				this.hintRender()
-			},
-
-			hintRender: function () {
-				const node = this.roadmap()[Math.max(0, this.getCursorAbsoluteIndex()-1)].node
-				const text = node.textContent
-
-				console.log(text)
-				console.log(this.input.category)
-				const search = this.input.category
-
-				const cats = this.$props.categories.filter(item => item.indexOf(search) !== -1)
-
-				let template = '<ul>'
-//				debugger
-				template += cats.reduce((acc, item) => `${acc}<li>${item}</li>`, '')
-				template = template + '</ul>'
-
-				this.hinter.innerHTML = template
-			},
-
 
 			interpolate: function() {
 				let {category, cats, description} = this.input
@@ -113,7 +79,7 @@
 				this.$refs.textfield.innerHTML = template
 			},
 
-			getCursorAbsoluteIndex: function(node = this.$el) {
+			getCursorAbsoluteIndex: function(node = this.$refs.textfield) {
 				if (!document.getSelection().anchorNode) return
 
 				const selectedNode = document.getSelection().anchorNode
@@ -121,24 +87,24 @@
 
 				const map = this.roadmap()
 				for (let i = 0; i < map.length; i++) {
-					if ((map[i].node === selectedNode ) ) { //|| map[i].node === selectedNode.parentNode    && map[i].offset === offset
-						return i+offset
+					if ((map[i].node === selectedNode )) { //|| map[i].node === selectedNode.parentNode    && map[i].offset === offset
+						return i + offset
 					}
 				}
 			},
 
 			setCursorAbsoluteIndex: function(index = this.input.cursor.offset) {
 				const map = this.roadmap()
-					if (map.length > index) {
-						const pos = map[index]
-						this.setFocus(pos.node, pos.offset)
-					} else {
-						this.setFocus()
-					}
+				if (map.length > index) {
+					const pos = map[index]
+					this.setFocus(pos.node, pos.offset)
+				} else {
+					this.setFocus()
+				}
 			},
 
 			roadmap: function(root, offset = 0) {
-				const el = root || this.$el
+				const el = root || this.$refs.textfield
 				const roadmap = []
 
 				if (!el.childNodes.length) {
@@ -171,15 +137,29 @@
 				return roadmap
 			},
 
-			setFocus: function(node = this.$el, offset, focusOn = this.$el) {
+			setFocus: function(node = this.$refs.textfield, offset, focusOn = this.$refs.textfield) {
 				const range = new Range()
-				range.setStart(node, offset || node.childNodes.length)
-				range.setEnd(node, offset || node.childNodes.length)
+
+				if (node.textContent.trim()) {
+					range.setStart(node, offset || node.childNodes.length)
+					range.setEnd(node, offset || node.childNodes.length)
+				} else {
+					range.setStart(node, 0)
+					range.setEnd(node, 0)
+				}
 				const sel = window.getSelection()
 				sel.removeAllRanges()
 				sel.addRange(range)
 
 				focusOn.focus()
+			},
+
+			dropdownSelect: function(selectItemText) {
+				this.input.category = selectItemText
+				this.input.cats = selectItemText.split(':')
+				this.interpolate()
+				this.change()
+
 			},
 		},
 
@@ -191,11 +171,11 @@
 					description: this.description,
 					text: this.category + ' ' + this.description,
 					cursor: {
-						offset: 0
+						offset: 0,
 					},
 					hint: {
-						text: 'category'
-					}
+						text: 'category',
+					},
 				},
 			}
 		},
@@ -203,30 +183,44 @@
 </script>
 
 <template>
-  <pre class="categoryInput"
-	   contenteditable
-	   @keyup="change"
-	   @change="change"
-	   @click="change"
-	   @blur="blur"
-	   @focus="focus"
+	<div class="categoryInputContainer">
+		<pre class="categoryInput"
+			 contenteditable
+			 @keyup="change"
+			 @change="change"
+			 @click="change"
+			 @blur="blur"
+			 @focus="focus"
 
-	   ref="textfield"
-  >
-  </pre>
+			 @keyup.enter="emitChange"
+
+			 ref="textfield"
+		></pre>
+
+		<app-datasheet-dropdown
+			:items="categories"
+			:query="input.category"
+			:input="$refs.textfield"
+
+			@select="dropdownSelect"
+		></app-datasheet-dropdown>
+	</div>
 </template>
 
 <style>
+	.categoryInputContainer {
+		position: relative;
+	}
 
 	.categoryInput {
-
-		background: #FFF;
+		background: transparent;
 		font: 400 18px/32px segoe UI, arial, sans-serif;
 		box-sizing: border-box;
 		margin: 10px 0;
 		padding: 0 15px;
 		width: 100%;
 		height: 32px;
+		white-space: nowrap;
 	}
 
 	.categoryInput .category {
@@ -250,21 +244,6 @@
 	}
 </style>
 
-<style >
-	#hinter {
-		position: absolute;
-		top: 50px;
-		left: 50px;
-		/*width: 100px;*/
-		/*height: 80px;*/
-		padding: 10px;
+<style>
 
-		background: coral;
-	}
-
-	#hinter ul {
-		padding: 0;
-		margin: 0;
-		list-style: none;
-	}
 </style>

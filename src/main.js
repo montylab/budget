@@ -15,6 +15,7 @@ import CategoryPieChart from '@/components/Statistic/CategoryPieChart'
 import Datasheet from '@/components/datasheet'
 import DatasheetItem from '@/components/datasheet/item'
 import DatasheetInput from '@/components/datasheet/input'
+import DatasheetDropdown from '@/components/datasheet/dropdown'
 
 import * as firebase from 'firebase'
 
@@ -27,6 +28,7 @@ Vue.component('app-settings-widget', Settings)
 Vue.component('app-datasheet-widget', Datasheet)
 Vue.component('app-datasheet-item',   DatasheetItem)
 Vue.component('app-datasheet-input',   DatasheetInput)
+Vue.component('app-datasheet-dropdown',   DatasheetDropdown)
 
 
 Vue.component('app-chart-summary', SummaryChart)
