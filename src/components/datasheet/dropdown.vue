@@ -7,7 +7,7 @@
 
 	export default {
 		name: 'app-datasheet-dropdown',
-		props: ['items', 'query', 'input'],
+		props: ['items', 'query', 'input', 'canBeShown'],
 
 		created: function() {
 			this.eventsBinding()
@@ -73,19 +73,18 @@
 					})
 
 					eventsHolder.addEventListener('blur', ()=> {
-						this.mightBeVisible = document.activeElement === this.input
+						this.mightBeVisible = false
 					})
 					eventsHolder.addEventListener('focus', ()=> {
 						this.mightBeVisible = document.activeElement === this.input
+						//this.mightBeVisible = document.getSelection().anchorNode.closest('.category')
 					})
-
-					console.log('events go!')
 				}
 			},
 
 			selected: function(e) {
 				const sel = this.selection
-				this.$emit('select', e && e.target.getAttribute("value") || this.filteredItems[sel].value)
+				this.$emit('select', e && e.target.getAttribute("value") || this.filteredItems[sel].source)
 			},
 
 			recalc: function() {
@@ -124,7 +123,7 @@
 <template>
 	<ul >
 		<li
-			v-if="mightBeVisible"
+			v-if="mightBeVisible && canBeShown"
 			v-for="(item, index) in filteredItems"
 
 			:value="item.source"

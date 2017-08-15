@@ -4,6 +4,7 @@ import Dashboard from '@/components/Dashboard'
 import Signin from '@/components/Signin';
 import Statistic from '@/components/Statistic/Statistic'
 import Settings from '@/components/Settings'
+import Importer from '@/components/Importer'
 
 Vue.use(Router);
 
@@ -24,6 +25,16 @@ export default new Router({
 			path: '/signin',
 			name: 'Signin',
 			component: Signin
+		},
+		{
+			path: '/import',
+			name: 'Import',
+			component: Importer
+		},
+		{
+			path: '/export',
+			name: 'Export',
+			component: Importer
 		},
 		{
 			path: '/',

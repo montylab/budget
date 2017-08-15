@@ -2,8 +2,8 @@
 	<div class="hello">
 		<app-calendar-widget></app-calendar-widget>
 
-		<app-datasheet-widget title="Income" :service="incomeService"></app-datasheet-widget>
-		<app-datasheet-widget title="Outcome" :service="outcomeService"></app-datasheet-widget>
+		<app-datasheet-serviced-widget title="Income" :service="incomeService"></app-datasheet-serviced-widget>
+		<app-datasheet-serviced-widget title="Outcome" :service="outcomeService"></app-datasheet-serviced-widget>
 	</div>
 </template>
 

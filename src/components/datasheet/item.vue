@@ -3,63 +3,117 @@
 	import dateService from '@/services/date-service'
 	import authService from '@/services/auth-service'
 	import currencyService from '@/services/currency-service'
+	import settingsService from '@/services/settings-service'
 
 	export default {
 		name: 'app-datasheet-item',
-		props: ['item', 'service'],
+		props: ['item', 'categories'],
 
-		created: function () {
-			this.service.events.$on('updated', (data) => {
-				this.categories = data.categories;
-			});
-
-			this.categories = this.service.getCategories();
+		data: function () {
+			return {
+				row: {
+					category: '',
+					description: '',
+					date: 0,
+					amount: 0,
+					pikaday: null
+				},
+				lastEmitted: {...this.item}
+			}
 		},
 
 		mounted: function() {
-			new Pikaday({field: this.$el.querySelector('input.date')})
+			this.pikaday = new Pikaday({field: this.$el.querySelector('input.date')})
+
+			console.log('mounted')
+			this.updateRow()
+
+		},
+
+		watch: {
+			item: function () {
+				console.log('watched')
+				this.updateRow()
+			}
 		},
 
 		computed: {
 			date: function() {
-				return dateService.fromTimestamp(this.item.date, 'DD.MM.YYYY')
+				return dateService.fromTimestamp(this.row.date, 'DD.MM.YYYY')
+			},
+			amountFixed: function () {
+				const val = parseFloat(this.row.amount)
+				return val.toFixed(settingsService.data.precision) / 1
+			},
+			dateOffset: function() {
+				return Math.abs(this.row.date % 1e5)
 			},
 		},
 
 		methods: {
+			updateRow: function () {
+				this.row = {...this.item}
+				this.pikaday.setDate(new Date(this.item.date))
+				this.lastEmitted = {...this.item}
+
+			},
+
 			dateChange: function(event) {
 				const val = event.target.value
-				this.item.date = dateService.toTimestamp(val, 'DD.MM.YYYY')
-				this.changed()
+				this.row.date = dateService.toTimestamp(val, 'DD.MM.YYYY') + this.dateOffset
+				console.log(val)
+				this.emitChange()
 			},
 
-			moneyChanged: function() {
-				let amount = parseFloat(this.item.amount)
-				if (this.item.amount.indexOf('$') != -1) {
-					this.item.amount = amount.toFixed(1)
+			moneyChanged: function({target: {value}}) {
+				let amount = parseFloat(value)
+				if (value.toString().indexOf('$') != -1) {
+					this.row.amount = amount
 				} else {
-					this.item.amount = (amount / currencyService.getCurrencyRate()).toFixed(1)
+					this.row.amount = (amount / currencyService.getCurrencyRate())
 				}
 
-				this.changed()
+				this.emitChange()
 			},
 
-			changed: function(e) {
-				this.item.category = this.$refs.catdesc.input.category
-				this.item.description = this.$refs.catdesc.input.description
-				this.service.dbPushItem(this.item)
+			inputChanged: function(e) {
+				this.row.category = this.$refs.catdesc.input.category
+				this.row.description = this.$refs.catdesc.input.description
+
+				this.emitChange()
+			},
+
+			emitChange: function () {
+				if (JSON.stringify(this.lastEmitted) === JSON.stringify(this.row)) {
+					console.log('emit skipped')
+					return
+				} else {
+					console.log('emit this.lastEmitted', this.lastEmitted)
+					console.log('emit this.row', this.row)
+				}
+				this.lastEmitted = {...this.row}
+				console.log('emit')
+				this.$emit('change', this.row)
 			},
 
 			deleteItem: function() {
-				this.service.delete(this.item.id)
+				this.$emit('delete', this.row)
 			},
-		},
 
-		data() {
-			return {
-				categories: []
+			focusToDate: function() {
+				setTimeout(()=>this.$refs.date.focus())
+			},
+
+			focusToCategory: function(e) {
+				setTimeout(()=>{
+					this.$refs.catdesc.selectCategory()
+				}, 200)
+			},
+
+			emitEnter: function(e) {
+				this.$emit('enter', {event: e, id: this.row.id})
 			}
-		},
+		}
 	}
 </script>
 
@@ -68,38 +122,44 @@
 <template>
 	<tr>
 		<td>
-			<input type="text" class="amount" v-model="item.amount" @change="moneyChanged">
+			<button class="btn btn-delete" @click="deleteItem" tabindex="-1">X</button>
+			<input type="text" class="amount" :value="amountFixed" @change="moneyChanged" @keydown.tab="focusToCategory" @keydown.enter="focusToCategory">
 		</td>
-		<!--<td>-->
-		<!--<input type="text" v-model="item.description" @change="changed">-->
-		<!--<button class="btn btn-delete" @click="deleteItem">X</button>-->
-		<!--</td>-->
-		<!--<td>-->
-		<!--<label>-->
-		<!--<input class="dropdown-input" :value="item.category" @change="changed"-->
-		<!--@awesomplete-selectcomplete="changed">-->
-		<!--<button class="dropdown-btn" type="button">+</button>-->
-		<!--</label>-->
-		<!--</td>-->
 		<td>
 			<app-datasheet-input
 				:categories="categories"
-				:category="item.category"
-				:description="item.description"
+				:category="row.category"
+				:description="row.description"
 
-				@change="changed"
+				@change="inputChanged"
+				@leave="focusToDate"
 
 				ref="catdesc"
 			></app-datasheet-input>
 		</td>
 		<td>
-			<input type="text" :value="date" @change="dateChange" class="date">
+			<input @change="dateChange" class="date" ref="date">
+			<input
+				type="text"
+				class="invisible"
+
+				@keydown.enter="emitEnter"
+			>
+			<div>
+				Enter or Tab to go next
+				<br>
+				Ctrl + Enter to insert new
+			</div>
 		</td>
+
 	</tr>
 </template>
 
 
 <style scoped>
+	td {
+		position: relative;
+	}
 
 	td:nth-child(1) {
 		width: 5%;
@@ -119,7 +179,7 @@
 		width: 15%;
 	}
 
-	input, select {
+	input, select, pre {
 		border: 0;
 		height: 100%;
 		width: 100%;
@@ -135,23 +195,51 @@
 		border-bottom: 2px solid #00BCD4;
 	}
 
-	.btn-delete {
-		background: #ffbfbf;
+	input.invisible {
+		width: 0;
+		height: 0;
 		position: absolute;
-		right: 0;
+		padding: 0;
+		border: 0;
+	}
+	.invisible + div {
+		font-size: 11px;
+		visibility: hidden;
+		position: absolute;
 		top: 0;
+		right: -1px;
 		bottom: 0;
+		color: #FFF;
+		background: #00bcd4;
+		line-height: 14px;
+		padding: 13px 15px 0;
+	}
+
+	.invisible:focus + div {
+		visibility: visible;
+	}
+
+	.btn-delete {
+		background: coral;
+		position: absolute;
+		left: 0;
+		top: 0;
+		height: 100%;
 		border-radius: 0;
 		border: 0;
 		outline: none;
-		padding: 0 10px;
-		transition: all .4s;
-		opacity: 0;
-		height: 100%;
+		margin: 0;
+		padding: 0;
+		text-align: center;
+		transition: all 0.3s cubic-bezier(0, 0.96, 0.89, 1.58);
+		max-width: 0;
+		width: 100%;
+		overflow: hidden;
 	}
 
-	tr:hover .btn-delete {
-		opacity: 1;
+	tr:hover .btn-delete, .btn-delete:hover {
+		left: -40px;
+		max-width: 40px;
 	}
 
 	.amount {
