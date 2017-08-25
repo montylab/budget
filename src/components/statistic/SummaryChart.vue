@@ -4,6 +4,7 @@
 
 <script>
 	import outcomeService from '@/services/outcome-service'
+	import authService from '@/services/auth-service'
 
 	export default {
 		data () {
@@ -36,6 +37,8 @@
 					this.$data.categories = data.categories;
                 	this.init()
 				}
+
+				authService.ready()
 			})
 		},
 
@@ -126,7 +129,7 @@
 				const context = svg.append("g")
 					.attr("class", "context")
 					.attr("transform", "translate(" + margin2.left + "," + margin2.top + ")")
-				
+
 				if (this.outcomeSummarized && this.outcomeSummarized.length) {
 					processData(null, this.outcomeSummarized)
 				}

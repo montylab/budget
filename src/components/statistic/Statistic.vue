@@ -16,6 +16,8 @@
   import incomeService from '@/services/income-service'
   import outcomeService from '@/services/outcome-service'
 
+  import authService from '@/services/auth-service'
+
   export default {
     data() {
       return {
@@ -25,6 +27,7 @@
     },
 
     created() {
+    	authService.notReady()
     },
 
     mounted() {

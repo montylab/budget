@@ -1,5 +1,5 @@
 <template>
-  <div class="widget calendar-widget">
+  <div class="widget calendar-widget layout-widget">
     <div class="widget-body">
       <ul>
         <li v-for="(yyyy, index) in yearArray" :class="{selected: year==yyyy}">
@@ -67,6 +67,7 @@
 <style scoped>
   .calendar-widget {
     width: 100%;
+	  background: #FFF
   }
 
   .widget-body {

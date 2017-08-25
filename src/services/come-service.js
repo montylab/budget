@@ -49,11 +49,10 @@ export default class ComeService {
 			}
 		}
 		filteredArray.sort((a, b) => a.date - b.date)
-		console.log(filteredArray)
 		return filteredArray
 	}
 
-	addNewItem = (itemOverrides) => {
+	addNewItem = (itemOverrides, notLastItem = false) => {
 		const id = utilsService.generateId()
 		const item = {
 			amount: 0,
@@ -66,12 +65,19 @@ export default class ComeService {
 		}
 		this.data.items[id] = item
 
-		this.dbPushItem(item)
+		//if (!notLastItem) {
+			this.dbPushItem(item)
+			this.events.$emit('updated', {
+				items: this.getItemsArray(),
+				categories: this.data.categories,
+			})
+		//}
+	}
 
-		this.events.$emit('updated', {
-			items: this.getItemsArray(),
-			categories: this.data.categories,
-		})
+	importItems = (items) => {
+		items.forEach(item => this.addNewItem(item))
+
+		return new Promise((rs, rj) => rs(true))
 	}
 
 	changeItem = (item) => {
@@ -127,6 +133,9 @@ export default class ComeService {
 					items: this.getItemsArray(),
 					categories: this.data.categories,
 				})
+
+				window.guesser = this.guesser
+				this.guessTest()
 			})
 	}
 
@@ -167,4 +176,71 @@ export default class ComeService {
 	}
 
 	generateId = () => Math.abs(~~(Math.random() * 1e15))
+
+	guesser = (phrase) => {
+		this.generateGuesserDictionary()
+
+		const split = phrase
+			.replace(/[\.\,\?\-]+/gim, ' ')
+			.replace(/\s+/gim, ' ')
+			.trim()
+			.split(' ')
+
+		const len = split.length
+		const result = {}
+		split.forEach(word => {
+			for (let cat in this.guessDic[word]) {
+				result[cat] = result[cat] ? result[cat] + this.guessDic[word][cat] : this.guessDic[word][cat]
+			}
+		})
+
+		let max = 0
+		let name = undefined
+		for (let cat in result) {
+			if (max < result[cat])	 {
+				max = result[cat]
+				name = cat
+			}
+		}
+		let guess = name
+
+		return {
+			guess: name,
+			phrase,
+			categories: result
+		}
+	}
+	generateGuesserDictionary = () => {
+		this.guessDic = this.getItemsArray().reduce((acc, item) => {
+			const split = item.description
+				.replace(/[\.\,\?\-]+/gim, ' ')
+				.replace(/\s+/gim, ' ')
+				.trim()
+				.split(' ')
+
+			const len = split.length
+			split.forEach(word => {
+				if (word) {
+					const score = word.length > 4 ? 1 : word.length > 2 ? 0.5 : 0.1
+
+					acc[word] = acc[word] || {}
+					acc[word][item.category] = acc[word][item.category] || 0
+					acc[word][item.category] += score / len
+				}
+			})
+			return acc
+		}, {})
+
+		return this.guessDic
+	}
+	guessTest = () => {
+		console.log('- - - - - - - - - - - -')
+		let cnt = 0
+		this.getItemsArray().forEach(item => {
+			if (item.description.trim() && guesser(item.description).guess != item.category) {
+				console.log(cnt++, item.description, guesser(item.description).guess, item.category)
+			}
+
+		})
+	}
 }

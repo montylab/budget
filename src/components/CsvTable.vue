@@ -3,30 +3,27 @@
 
 	export default {
 		name: 'importer',
-		props: ['input'],
+		props: ['value'], // {data: [], mapOptions}
 
+		data() {
+			return {
+				mapOptions: [
+					{name: 'date', disabled: false},
+					{name: 'amount', disabled: false},
+					{name: 'currency', disabled: false},
+					{name: 'description', disabled: false},
+					{name: 'category', disabled: false}
+				]
+			}
+		},
 
 		watch: {
-			input: {
-				handler: function() {
-					this.result = JSON.parse(JSON.stringify(this.input))
-					console.log(this.result.length)
-				},
-				deep: true
-			},
-
-			result: function () {
-				this.$emit('change', {
-					items: JSON.parse(JSON.stringify(this.result)),
-					mapNames: this.mapNames
-				})
-			},
-
-			mapNames: function() {
-				this.$emit('change', {
-					items: JSON.parse(JSON.stringify(this.result)),
-					mapNames: this.mapNames
-				})
+			value: {
+				deep: true,
+				handler() {
+					this.$emit('input', this.value)
+					this.$emit('change', this.value)
+				}
 			}
 		},
 
@@ -34,17 +31,12 @@
 		methods: {
 			deleteRow: function({target}) {
 				const index = target.getAttribute('value')
-				//target.closest('tr').style.transform = 'scaleY(0.1)'
-
-				setTimeout(() => {
-					this.result.splice(index, 1)
-				}, 300)
-
+				this.value.data.splice(index, 1)
 			},
 			deleteColumn: function({target}) {
 				const index = target.getAttribute('value')
 
-				this.result = this.result.map((item) => {
+				this.value.data = this.value.data.map((item) => {
 					item.splice(index, 1)
 					return item
 				})
@@ -58,40 +50,24 @@
 				const prevEl = this.mapOptions.find(item => item.name == prevVal)
 				el && (el.disabled = !el.disabled)
 				prevEl && (prevEl.disabled = !prevEl.disabled)
-
-				console.log(this.mapNames)
-			}
-		},
-
-		data() {
-			return {
-				result: [],
-				mapNames: [],
-				mapOptions: [
-					{name: 'date', disabled: false},
-					{name: 'amount', disabled: false},
-					{name: 'curency', disabled: false},
-					{name: 'description', disabled: false},
-					{name: 'category', disabled: false}
-				]
 			}
 		},
 	}
 </script>
 
 <template>
-	<div>
-		<table v-if="result.length">
-			<tr>
+	<div class="widget layout-widget csvtable-widget">
+		<table v-if="value.data.length">
+			<tr class="centrify">
 				<td></td>
-				<td v-for="(field, i) in result[0]">
-					<a class="btn delete" @click="deleteColumn" :value="i">X</a>
+				<td v-for="(field, i) in value.data[0]">
+					<a class="btn btn-remove" @click="deleteColumn" :value="i">X</a>
 				</td>
 			</tr>
 			<tr>
 				<td></td>
-				<td v-for="(field, i) in result[0]">
-					<select @change="selectMapOption" v-model="mapNames[i]">
+				<td v-for="(field, i) in value.data[0]">
+					<select @change="selectMapOption" v-model="value.mapColumns[i]">
 						<option>none</option>
 						<option
 							v-for="option in mapOptions"
@@ -102,10 +78,10 @@
 				</td>
 			</tr>
 			<tr
-				v-for="(item, index) in result"
+				v-for="(item, index) in value.data"
 			>
 				<td>
-					<a class="btn delete" @click="deleteRow" :value="index">X</a>
+					<a class="btn btn-remove" @click="deleteRow" :value="index">X</a>
 				</td>
 				<td
 					v-for="field in item"
@@ -119,14 +95,22 @@
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-	.delete {
-		background: coral;
-		border: 0;
+	.widget {
+		background: #FFF;
+		overflow: auto;
+	}
+
+	.centrify {
+		text-align: center;
 	}
 
 	table {
 		border: 0;
 		border-collapse: collapse;
+	}
+
+	td {
+		padding: 3px;
 	}
 
 	tr {
@@ -135,6 +119,6 @@
 	}
 
 	tr:hover {
-		background: #FFF;
+		background: #c0f3ff;
 	}
 </style>

@@ -4,27 +4,48 @@ import * as firebase from 'firebase'
 import utilsService from '@/services/utils-service'
 import authService from '@/services/auth-service'
 
-const defaultSettings = {
-	precision: 2,
-	greeting: 'name',
+const staticSettings = {
+	greetingsOptions: ['name', 'email', 'none'],
 }
 
-const settingsOptions = {
-	greeting: ['name', 'email', 'none'],
+const defaultSettings = {
+	precision: 2,
+	greetings: 'name',
+	appCurrency: 'USD',
+	userCurrency: 'BYN',
+
+	replace: false,
+	replacers: [
+		{from: ' / MINSK / BY', to: ''},
+	],
+
+	// hidden options
+	...staticSettings
 }
 
 export default {
 	events: new Vue(),
 
 	data: defaultSettings,
-	options: settingsOptions,
+	fetchedSnapshot: null,
+
+	getSettings() {
+		return JSON.parse(JSON.stringify({
+			...this.data,
+			...staticSettings
+		}))
+	},
 
 	change(changes) {
+		const snapshot = JSON.stringify(this.data)
 		this.data = {
 			...this.data,
 			...changes
 		}
-		this.dbPush()
+
+		if (JSON.stringify(this.data) !== snapshot) {
+			this.dbPush()
+		}
 	},
 
 	dbFetch() {
@@ -40,7 +61,7 @@ export default {
 			then(snapshot => {
 				this.change(snapshot.val())
 				this.events.$emit('updated', {
-					settings: this.data,
+					settings: this.getSettings(),
 				})
 			})
 	},
@@ -53,10 +74,11 @@ export default {
 		}
 
 		const db = firebase.database()
+		console.log('set', this.data)
 		db.ref('users/' + uid + '/settings').set(this.data)
 
 		this.events.$emit('updated', {
-			settings: this.data,
+			settings: this.getSettings()
 		})
 	},
 }

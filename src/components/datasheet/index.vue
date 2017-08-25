@@ -1,6 +1,6 @@
 <style scoped>
 	.datasheet-widget {
-
+		background: #FFF;
 	}
 
 	.debug-table {

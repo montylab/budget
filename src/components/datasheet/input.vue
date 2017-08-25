@@ -3,21 +3,61 @@
 		name: 'app-datasheet-input',
 		props: ['categories', 'description', 'category'],
 
+		data: function() {
+			return {
+				input: {
+					category: this.category || ' ',
+					description: this.description || ' ',
+					cursor: {
+						offset: 0,
+					},
+				},
+				canLeaveAfter: 0,
+				focusType: 'category', // null || category || description
+			}
+		},
+
+		computed: {
+			splittedCategories: function() {
+				return this.input.category.split(':')
+			},
+			text: function() {
+				return (this.input.category + ' ' + this.input.description).trim()
+			},
+			canDropdown: function() {
+				return this.focusType === 'category'
+			},
+		},
+
+		watch: {
+			category: function() {
+				this.input.category = this.category
+				this.interpolate()
+
+			},
+			description: function() {
+				this.input.description = this.description
+				this.interpolate()
+			}
+		},
+
+
 		mounted: function() {
 			this.interpolate()
 		},
 
 		methods: {
-			emitChange: function(e) {
+			emitChange: function() {
 				this.$emit('change', {
 					category: this.input.category.trim(),
 					description: this.input.description.trim(),
 				})
 			},
 
-			enterDown: function (e) {
+			enterDown: function(e) {
 				e.preventDefault()
-				if (this.focusType == 'description') {
+
+				if (this.focusType === 'description') {
 					if (this.canLeaveAfter + 150 < +new Date()) {
 						this.$emit('leave')
 						this.emitChange()
@@ -29,25 +69,25 @@
 			},
 
 			change: function(e) {
-				if (e) {
-				}
-
 				this.input.cursor.offset = this.getCursorAbsoluteIndex()
 
-				const value = this.$refs.textfield.innerText.replace(/\u00A0| |&nbsp;/gim, ' ')
-				let rerender = value !== this.text
+				const value = this.normalizeString(this.$refs.textfield.innerText)
+				let rerender = !this.sameString(value, this.text)
 				const cat = value.split(' ')[0]
-				const desc = value.indexOf(' ') !== -1 ? value.slice(value.indexOf(' ') + 1) : ''
+				const desc = (value.indexOf(' ') !== -1 ? value.slice(value.indexOf(' ') + 1) : '') || ' '
+
 
 				if (this.input.cursor.offset) {
 					this.focusType = this.input.cursor.offset > cat.length ? 'description' : this.focusType = 'category'
 				}
 
-
-					this.input.category = cat
-				this.input.description = desc.replace(/ /gim, '\u00A0')
+				this.input.category = this.normalizeString(cat)
+				this.input.description = this.normalizeString(desc)
 
 				if (rerender) {
+					console.log(`#${cat}#`)
+					console.log(`#${desc}#`)
+
 					this.interpolate()
 					if (!!document.activeElement.closest('.categoryInput')) {
 						this.setCursorAbsoluteIndex()
@@ -56,7 +96,7 @@
 			},
 
 			focus: function(e) {
-				this.change()
+//				this.change()
 			},
 
 			blur: function(e) {
@@ -66,6 +106,8 @@
 			},
 
 			interpolate: function() {
+				console.log('interpolate');
+
 				let {category, description} = this.input
 
 				let categoryTemplate = this.splittedCategories.reduce((acc, item) => {
@@ -73,13 +115,22 @@
 				}, '')
 				categoryTemplate = categoryTemplate.replace(/:$/, '')
 
-				let template = `<span class="category">${categoryTemplate}</span><span class="sepatator">&nbsp;</span><span class="description">${description}</span>`
+				let template = `<span class="category">${categoryTemplate}</span><span class="separator"> </span><span class="description">${description}</span>`
 
-				if (this.$refs.textfield.innerHTML === template) {
+				if (this.sameString(this.$refs.textfield.innerHTML , template)) {
 					return
 				}
 
+				console.log('interpolate done');
 				this.$refs.textfield.innerHTML = template
+			},
+
+			sameString: function (a, b) {
+				return this.normalizeString(a) === this.normalizeString(b)
+			},
+
+			normalizeString(str) {
+				return str.replace(/\s|&nbsp;/gim, ' ')
 			},
 
 			getCursorAbsoluteIndex: function(node = this.$refs.textfield) {
@@ -97,6 +148,7 @@
 			},
 
 			setCursorAbsoluteIndex: function(index = this.input.cursor.offset) {
+				console.log('setCursorAbsoluteIndex')
 				const map = this.roadmap()
 				if (map.length > index) {
 					const pos = map[index]
@@ -141,7 +193,7 @@
 			},
 
 			setFocus: function(node = this.$refs.textfield, offset, focusOn = this.$refs.textfield) {
-
+				console.log('set focus')
 				const range = new Range()
 
 				if (node.textContent.trim()) {
@@ -158,22 +210,30 @@
 				focusOn.focus()
 			},
 
-			selectZone: function (zone) {
-				this.setFocus()
+			selectZone: function(zone) {
+				console.log('select zone',  zone)
+				setTimeout(() => {
+					try {
+						if (!zone) {debugger}
+						this.setFocus()
 
-				const node = zone
-				const end = node.childNodes.length
+						const node = zone
+						const end = node.childNodes.length
 
-				const range = new Range()
+						const range = new Range()
 
-				range.setStart(node, 0)
-				range.setEnd(node, end)
+						range.setStart(node, 0)
+						range.setEnd(node, end)
 
-				const sel = window.getSelection()
-				sel.removeAllRanges()
-				sel.addRange(range)
+						const sel = window.getSelection()
+						sel.removeAllRanges()
+						sel.addRange(range)
 
-				this.$refs.textfield.focus()
+						this.$refs.textfield.focus()
+					} catch (e) {
+						debugger
+					}
+				}, 50)
 			},
 
 			selectCategory: function() {
@@ -189,64 +249,19 @@
 			dropdownSelect: function(selectItemText) {
 				this.input.category = selectItemText
 				this.interpolate()
+
 				this.change()
 
-
-				setTimeout(()=>{
+				setTimeout(() => {
 					this.focusType = 'description'
 					this.selectZone(this.$el.querySelector('.description'))
-				})
-
-
-
+				}, 100)
 
 				this.canLeaveAfter = +new Date() + 100
-			},
-
-			tab: function() {
-
-			},
-		},
-
-		watch: {
-			category: function() {
-				this.input.category = this.category
-				this.interpolate()
-//				this.change()
-
-			},
-			description: function() {
-				this.input.description = this.description
-				this.interpolate()
-//				this.change()
-			},
-		},
-
-		computed: {
-			splittedCategories: function() {
-				return this.input.category.split(':')
-			},
-			text: function() {
-				return (this.input.category + ' ' + this.input.description).trim()
-			},
-			canDropdown: function() {
-				return this.focusType === 'category'
-			},
-		},
-
-		data: function() {
-			return {
-				input: {
-					category: this.category,
-					description: this.description,
-					cursor: {
-						offset: 0,
-					},
-				},
-				canLeaveAfter: 0,
-				focusType: 'category', // null || category || description
 			}
 		},
+
+
 	}
 </script>
 
@@ -305,17 +320,27 @@
 		transition: all .4s;
 	}
 
+
 	.categoryInput:focus {
 		border-bottom: 2px solid #00BCD4;
 	}
 
-	.categoryInput .category {
-		color: red;
+	.categoryInput .category, .categoryInput .subcategory, .categoryInput .description   {
+		/*background-color: olive;*/
+		display: inline-block;
+		vertical-align: top;
+		min-width: 4px;
+		min-height: 100%;
+		text-indent: 0;
 	}
 
+
+
 	.categoryInput .description {
-		color: #888
+		color: #666;
 	}
+
+
 
 	.subcategory {
 		color: darkorange
@@ -333,9 +358,5 @@
 
 	}
 
-
-</style>
-
-<style>
 
 </style>

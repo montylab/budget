@@ -1,0 +1,39 @@
++todo [import] process data and save to server
++todo [import] upload file
+# not needed anymore todo [import] insert as text (json / csv)
++todo [import] currency convertation
++todo [import] replace csv description to human readable
++todo [import] backup
+@todo [import] autodeteck backup, show controls only in csv mode
+@todo [import] make autoprediction for categories
+
+
+
++todo [settings] separate settings by widgets
++todo [settings] display widgets related to page
++todo [settings] APP and USER currency
++todo [setting] modal settings widgets
+
+
++todo [export] all data backup
++todo [export] date range in/out backup
++todo [export] json, csv
++todo [export] monthly email backup
+   todo [export] ux
+
+
++todo [ux] splash signin screen for non authenticated users
++todo [ux] sign out button
++todo [ux] hints as guide
+	- statistic
+	- import
+	- export
+	- settings
+	- make go throuht the app
+@todo [ux] help page
+@todo [ux] mobile version?
++todo [ux] date blur -> focus to next item
++todo [ux] make dashboard load date related data
++todo [ux] focus fix on datasheet line, make clear
++todo [ux] sign screen make animated text slides
++todo [ux] make dropdown menu

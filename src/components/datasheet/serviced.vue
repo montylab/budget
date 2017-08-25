@@ -1,24 +1,19 @@
 <style scoped>
-	.addone {
-		background: #FFF;
-		border: 0;
-		height: 32px;
-		width: 100%;
-		color: #00BCD4;
-		font-size: 32px;
-		outline: none;
-		border-top: 1px solid #00bcd4;
-		cursor: pointer;
+	.btns {
+		display: flex;
+		justify-content: flex-end;
+		margin-top: 20px
 	}
 </style>
 
 <template>
-	<div class="widget datasheet-widget">
+	<div class="widget layout-widget">
 		<h1>{{title}}</h1>
 		<app-datasheet-widget
 			:items="items"
 			:categories="categories"
 			:selectedDate="selectedDate"
+			:title="title"
 
 			@change="itemChange"
 			@delete="itemDelete"
@@ -28,7 +23,9 @@
 			ref="datasheet"
 		></app-datasheet-widget>
 
-		<button @click="newItem" class="addone">+</button>
+		<div class="btns">
+			<button @click="newItem" class="btn addone">+</button>
+		</div>
 	</div>
 </template>
 
@@ -49,10 +46,14 @@
 		},
 
 		created: function() {
+			authService.notReady()
+
 			this.service.events.$on('updated', (data) => {
 				this.items = this.service.getItemsArray(this.selectedDate)
-				console.log(this.items)
+
 				this.categories = data.categories
+
+				authService.ready()
 			})
 
 			dateService.events.$on('selectedChanged', (selected) => {
@@ -60,6 +61,8 @@
 				this.items = this.service.getItemsArray(selected)
 			})
 
+
+			this.selectedDate = dateService.selected
 			this.items = this.service.getItemsArray(this.selectedDate)
 			this.categories = this.service.getCategories()
 		},
@@ -92,6 +95,8 @@
 			},
 
 			processEnter: function({event, id}) {
+				console.log('process enter')
+
 				if (this.items[this.items.length-1].id === id) {
 					this.newItem()
 					return
@@ -101,9 +106,8 @@
 					const item = this.items.find((item)=>item.id===id)
 					const index = this.items.indexOf(item)+1
 					this.newItem({date: item.date+1e3})
-					this.focusItem(index)
+					return
 				}
-
 			}
 		},
 	}
