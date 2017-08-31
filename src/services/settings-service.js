@@ -49,6 +49,8 @@ export default {
 	},
 
 	dbFetch() {
+		window.setting = this;
+
 		const uid = authService.getUid()
 		if (!uid) {
 			console.warn('There is no uid at data fetch')

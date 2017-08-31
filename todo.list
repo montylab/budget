@@ -19,7 +19,12 @@
 +todo [export] date range in/out backup
 +todo [export] json, csv
 +todo [export] monthly email backup
-   todo [export] ux
++todo [backups] create backups lister
+@todo [backups] autobackup
+@todo [backup] make email sender
+@todo [backup] store indexedDB (more space)
+@todo [backup] clear backups after
+@todo [backup] make server ware backup
 
 
 +todo [ux] splash signin screen for non authenticated users

@@ -10,6 +10,7 @@ import Calendar from '@/components/Calendar'
 import Settings from '@/components/Settings'
 import Importer from '@/components/Importer'
 import Exporter from '@/components/Exporter'
+import Backup from '@/components/Backup'
 
 import Modal from '@/components/Modal'
 
@@ -18,6 +19,7 @@ import Currency from '@/components/settings/Currency'
 import Precision from '@/components/settings/Precision'
 import Greetings from '@/components/settings/Greetings'
 import ReplaceSwitcher from '@/components/settings/ReplaceSwitcher'
+import Autocategoriser from '@/components/settings/Autocategoriser'
 
 import Switcher from '@/components/controls/Switcher'
 import Radio from '@/components/controls/Radio'
@@ -46,6 +48,7 @@ window.introJs = introJs
 
 Vue.component('app-header', Header)
 Vue.component('app-splash', Splash)
+Vue.component('app-backup', Backup)
 Vue.component('app-calendar-widget', Calendar)
 
 Vue.component('app-settings-widget', Settings)
@@ -64,6 +67,7 @@ Vue.component('app-settings-currency-widget', Currency)
 Vue.component('app-settings-precision-widget', Precision)
 Vue.component('app-settings-greetings-widget', Greetings)
 Vue.component('app-settings-replace-switcher-widget', ReplaceSwitcher)
+Vue.component('app-autocategoriser', Autocategoriser)
 
 Vue.component('app-controls-switcher', Switcher)
 Vue.component('app-controls-radio', Radio)

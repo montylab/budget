@@ -63,12 +63,23 @@
 						this.emitChange()
 					}
 				} else {
+					if (e.metaKey) {
+						try {
+							const zone = e.target.closest('tr').nextElementSibling.querySelector('.category')
+							this.selectZone(zone)
+						} catch (e) {}
+//						debugger
+						return
+					}
+
 					this.focusType = 'description'
 					this.selectZone(this.$el.querySelector('.description'))
 				}
 			},
 
 			change: function(e) {
+				if (e && e.type === 'keyup' && e.metaKey) return
+
 				this.input.cursor.offset = this.getCursorAbsoluteIndex()
 
 				const value = this.normalizeString(this.$refs.textfield.innerText)
@@ -106,11 +117,12 @@
 			},
 
 			interpolate: function() {
-				console.log('interpolate');
+//				console.log('interpolate');
 
 				let {category, description} = this.input
 
 				let categoryTemplate = this.splittedCategories.reduce((acc, item) => {
+					item = item || ' '
 					return acc += `<span class="subcategory">${item}</span>:`
 				}, '')
 				categoryTemplate = categoryTemplate.replace(/:$/, '')
@@ -121,7 +133,7 @@
 					return
 				}
 
-				console.log('interpolate done');
+//				console.log('interpolate done');
 				this.$refs.textfield.innerHTML = template
 			},
 
@@ -214,8 +226,8 @@
 				console.log('select zone',  zone)
 				setTimeout(() => {
 					try {
-						if (!zone) {debugger}
-						this.setFocus()
+						if (!zone) return
+						this.setFocus(zone.closest('pre'))
 
 						const node = zone
 						const end = node.childNodes.length
@@ -229,9 +241,9 @@
 						sel.removeAllRanges()
 						sel.addRange(range)
 
-						this.$refs.textfield.focus()
+						zone.closest('pre').focus()
 					} catch (e) {
-						debugger
+						console.warn(e)
 					}
 				}, 50)
 			},
@@ -246,16 +258,23 @@
 				this.selectZone(this.$el.querySelector('.description'))
 			},
 
-			dropdownSelect: function(selectItemText) {
-				this.input.category = selectItemText
+			dropdownSelect: function({value, meta}) {
+				this.input.category = value
 				this.interpolate()
 
 				this.change()
 
-				setTimeout(() => {
-					this.focusType = 'description'
-					this.selectZone(this.$el.querySelector('.description'))
-				}, 100)
+				if (meta) {
+					try {
+						const zone = this.$refs.textfield.closest('tr').nextElementSibling.querySelector('.category')
+						this.selectZone(zone)
+					} catch (e) {}
+				} else {
+					setTimeout(() => {
+						this.focusType = 'description'
+						this.selectZone(this.$el.querySelector('.description'))
+					}, 100)
+				}
 
 				this.canLeaveAfter = +new Date() + 100
 			}

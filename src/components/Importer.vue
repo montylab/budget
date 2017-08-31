@@ -6,6 +6,7 @@
 	import dateService from '@/services/date-service'
 	import currencyService from '@/services/currency-service'
 	import settingsService from '@/services/settings-service'
+	import utilsService from '@/services/utils-service'
 	import latToCyr from 'latin-to-cyrillic'
 
 	import Dropzone from 'dropzone'
@@ -90,12 +91,12 @@
 				raw: {
 					data: {},
 					mapColumns: [],
+					datasheet: []
 				},
 
 				datasheetItems: [],
 				categoriesIncome: [],
 				categoriesOutcome: [],
-
 
 				settings: {
 					type: 'smart',
@@ -108,6 +109,7 @@
 
 				result: null,
 				file: null,
+				step: 0,
 				currencyService,
 			}
 		},
@@ -125,7 +127,6 @@
 
 			categories() {
 				return this.settings.type === 'income' ? this.categoriesIncome : this.categoriesOutcome
-
 			},
 		},
 
@@ -141,12 +142,8 @@
 
 			settings: {
 				deep: true,
-				handler() {this.rawToDatasheet()},
-			},
-			raw: {
-				deep: true,
-				handler() {this.rawToDatasheet()},
-			},
+				handler() {this.settingsChanged()},
+			}
 		},
 
 		created: function() {
@@ -186,6 +183,14 @@
 		},
 
 		methods: {
+			proceed() {
+				this.step = 1
+				this.rawToDatasheet()
+			},
+			back() {
+				this.step = 0
+			},
+
 			parse: function(parsed) {
 				const result = parsed || papaParse.parse(testinput)
 
@@ -203,10 +208,16 @@
 					}
 				}
 
+				const filteredData = result.data.filter(item => item.length == length)
+				const identifiedData = filteredData.map(item => ({...item, id: utilsService.generateId()}))
+
 				this.raw = {
-					data: result.data.filter(item => item.length == length),
+					data: identifiedData,
 					mapColumns: [],
+					datasheet: [],
 				}
+
+				this.rawToDatasheet()
 
 				return this.raw
 			},
@@ -220,35 +231,50 @@
 
 				const dateFormat = dateService.determineDateFormat(this.raw.data.map(item => item[dat]))
 
-				this.datasheetItems = this.raw.data.map((row) => {
-					let amount = amo != -1 ? row[amo] * (this.settings.inverse * -2 + 1) : '0'
-
+				this.raw.datasheet = this.raw.data.map((row) => {
+					let amount = amo !== -1 && row[amo] ? row[amo] : 0
 					if (row[cur]) {
 						amount = currencyService.convertToApp({currency: row[cur], value: amount})
 					} else {
 						amount = currencyService.convertToApp({currency: this.settings.defaultCurrency, value: amount})
 					}
 
-					let description = des != -1 ? row[des] : ''
-					if (this.settings.replace && row[des]) {
+					return {
+						id: row.id,
+						amount,
+						category: cat !== -1 ? row[cat] : '',
+						description: des !== -1 ? row[des] : '',
+						date: dat !== -1 ? dateService.strToTimestamp(row[dat], dateFormat) : +new Date(),
+						currency: cur !== -1 ? row[cur] : this.settings.defaultCurrency
+					}
+				})
+
+				this.datasheetItems = JSON.parse(JSON.stringify(this.raw.datasheet))
+				this.settingsChanged()
+			},
+
+			settingsChanged: function () {
+				this.datasheetItems.forEach(item => {
+					item.amount = item.amount * (this.settings.inverse * -2 + 1)
+
+					if (this.settings.replace && item.description) {
 						this.settings.replacers.forEach((repl) => {
 							if (!repl.enabled) return
-							description = description.replace(repl.from, repl.to)
+							item.description = item.description.replace(repl.from, repl.to)
 						})
 					}
-					if (this.settings.translitConversion && description) {
-						description = latToCyr(description)
+
+					if (this.settings.translitConversion && item.description) {
+						item.description = latToCyr(item.description)
 					}
 
-					return {
-						category: cat != -1 ? row[cat] : '',
-						date: dat != -1 ? dateService.strToTimestamp(row[dat], dateFormat) : +new Date(),
-						amount,
-						description,
+					if (this.settings.autocategoriser && item.description && !item.category) {
+						item.category = outcomeService.guesser(item.description).guess || ''
 					}
 				})
 
 			},
+
 
 			importData: function() {
 				switch (this.settings.type) {
@@ -259,8 +285,10 @@
 						this.importCome(outcomeService)
 						return
 					case 'smart':
+						console.log(this.negativeDatasheetItems, 'neg')
 						this.importCome(incomeService, this.negativeDatasheetItems)
 						this.importCome(outcomeService, this.positiveDatasheetItems)
+						console.log(this.positiveDatasheetItems, 'pos')
 						return
 				}
 			},
@@ -269,7 +297,7 @@
 				service.importItems(data).then((result) => {
 					this.result = result
 
-					this.raw = {mapColumns: [], data: []}
+					this.raw = {mapColumns: [], data: [], datasheet: []}
 					this.datasheetItems = []
 
 					importService.updateApp()
@@ -319,8 +347,33 @@
 				}, 100)
 
 			},
-		},
 
+			deleteItem({id}) {
+				this.raw.data = this.raw.data.filter(row => row.id != id)
+			},
+
+			changeItem(item) {
+				this.cnt = this.cnt || 0;
+				console.log(this.cnt++)
+
+				let index = this.datasheetItems.findIndex(({id}) => id === item.id)
+				if (index != -1) {
+					this.datasheetItems[index] = item
+				}
+
+				index = this.positiveDatasheetItems.findIndex(({id}) => id === item.id)
+				if (index != -1) {
+					this.positiveDatasheetItems[index] = item
+				}
+
+				index = this.negativeDatasheetItems.findIndex(({id}) => id === item.id)
+				if (index != -1) {
+					this.negativeDatasheetItems[index] = item
+				}
+
+				//debugger
+			},
+		},
 	}
 </script>
 
@@ -367,11 +420,15 @@
 			</div>
 			<div class="flex">
 				<h1>Options</h1>
-				<app-controls-switcher v-model="settings.replace" title="Enable Auto Replace"
-									   @click.native="replaceModalCheck"></app-controls-switcher>
+
+				<app-settings-replace-switcher-widget
+					@click.native="replaceModalCheck"></app-settings-replace-switcher-widget>
+
 				<app-controls-switcher v-model="settings.translitConversion"
 									   title="Translit to Russian Conversion"></app-controls-switcher>
 				<app-controls-switcher v-model="settings.inverse" title="Inverse amount column"></app-controls-switcher>
+
+				<app-autocategoriser></app-autocategoriser>
 
 				<div>
 					<label>
@@ -390,35 +447,51 @@
 
 		<div v-if="settings.type != 'backup'">
 			<div class="tableContainer">
-				<app-csv-table-widget v-model="raw"></app-csv-table-widget>
+				<app-csv-table-widget v-model="raw" v-if="step === 0"></app-csv-table-widget>
 
-				<div v-if="settings.type === 'smart'">
-					<div v-if="negativeDatasheetItems.length">
-						<h1>Income</h1>
-						<app-datasheet-widget
-							:items="negativeDatasheetItems"
-							:categories="categoriesIncome"
-							title="income"
-						></app-datasheet-widget>
+
+				<div v-if="step === 1">
+					<div v-if="settings.type === 'smart'">
+						<div v-if="negativeDatasheetItems.length">
+							<h1>Income</h1>
+							<app-datasheet-widget
+								:items="negativeDatasheetItems"
+								:categories="categoriesIncome"
+								title="income"
+								@delete="deleteItem"
+								@change="changeItem"
+							></app-datasheet-widget>
+						</div>
+						<div v-if="positiveDatasheetItems.length">
+							<h1>Outcome</h1>
+							<app-datasheet-widget
+								:items="positiveDatasheetItems"
+								:categories="categoriesOutcome"
+								title="outcome"
+								@delete="deleteItem"
+								@change="changeItem"
+							></app-datasheet-widget>
+						</div>
 					</div>
-					<div v-if="positiveDatasheetItems.length">
-						<h1>Outcome</h1>
-						<app-datasheet-widget
-							:items="positiveDatasheetItems"
-							:categories="categoriesOutcome"
-							title="outcome"
-						></app-datasheet-widget>
-					</div>
+
+					<app-datasheet-widget
+						v-else
+						:items="datasheetItems"
+						:categories="categories"
+						@delete="deleteItem"
+						@change="changeItem"
+					></app-datasheet-widget>
+
+
 				</div>
 
-				<app-datasheet-widget
-					v-else
-					:items="datasheetItems"
-					:categories="categories"
-				></app-datasheet-widget>
 			</div>
 
-			<div class="btns"><a class="btn" @click="importData">Import</a></div>
+			<div class="btns">
+				<a class="btn" @click="proceed" v-if="step === 0">Proceed</a>
+				<a class="btn btn-dark" @click="back" v-if="step === 1">Back</a>
+				<a class="btn" @click="importData" v-if="step === 1">Import</a>
+			</div>
 		</div>
 
 
@@ -442,13 +515,11 @@
 <style scoped>
 	.widget {
 		width: 100%;
-		overflow: hidden;
 		padding-bottom: 10px;
 	}
 
 	.tableContainer {
 		width: 100%;
-		overflow: auto;
 	}
 
 	h1, h2 {
@@ -500,6 +571,10 @@
 		margin-top: 20px;
 		display: flex;
 		justify-content: flex-end;
+	}
+
+	.btns .btn {
+		margin-left: 40px;
 	}
 
 	.message {

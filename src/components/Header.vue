@@ -84,6 +84,7 @@
 				<div class="dropdown" ref="dropdown">
 					<router-link to="/import">Import</router-link>
 					<router-link to="/export">Export</router-link>
+					<router-link to="/backup">Backup</router-link>
 					<a @click="signout">Sign Out</a>
 				</div>
 			</div>

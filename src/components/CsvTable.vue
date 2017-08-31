@@ -37,7 +37,7 @@
 				const index = target.getAttribute('value')
 
 				this.value.data = this.value.data.map((item) => {
-					item.splice(index, 1)
+					delete item[index]
 					return item
 				})
 			},

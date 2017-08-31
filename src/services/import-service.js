@@ -6,7 +6,7 @@ import outcomeService from '@/services/outcome-service'
 import settingsService from '@/services/settings-service'
 
 export default {
-	importBackup: (backup) => {
+	importBackup(backup) {
 		const uid = authService.getUid()
 		if (!uid) {
 			console.warn('There is no uid')
@@ -23,13 +23,20 @@ export default {
 			const db = firebase.database()
 			db.ref('users/' + uid).set(backup).then(()=>{
 				db.ref('users/' + uid).once('value').then((snapshot)=>{
-					rs(JSON.stringify(snapshot.val()) === JSON.stringify(backup))
+					const result = JSON.stringify(snapshot.val()) === JSON.stringify(backup)
+					if (!result) {
+						console.log('Backup wasn\'t applied')
+					} else {
+						this.updateApp()
+
+					}
+					rs(result)
 				})
 			})
 		})
 	},
 
-	updateApp: () => {
+	updateApp() {
 		incomeService.dbFetch()
 		outcomeService.dbFetch()
 		settingsService.dbFetch()

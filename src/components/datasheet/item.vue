@@ -67,6 +67,8 @@
 			},
 
 			moneyChanged: function({target: {value}}) {
+				debugger
+
 				let amount = parseFloat(value)
 				if (value.toString().indexOf('$') != -1) {
 					this.row.amount = amount
@@ -113,7 +115,7 @@
 						const amountInput = nextTr.querySelector('.amount')
 						amountInput.select()
 					} catch (e) {
-						debugger
+						console.warn(e)
 					}
 				}, 50)
 			}

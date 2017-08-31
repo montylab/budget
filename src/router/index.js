@@ -6,6 +6,7 @@ import Statistic from '@/components/Statistic/Statistic'
 import Settings from '@/components/Settings'
 import Importer from '@/components/Importer'
 import Exporter from '@/components/Exporter'
+import Backup from '@/components/Backup'
 
 import Splash from '@/components/Splash'
 
@@ -20,6 +21,11 @@ const router = new Router({
 			path: '/stat',
 			name: 'Statistics',
 			component: Statistic,
+		},
+		{
+			path: '/backup',
+			name: 'Backup',
+			component: Backup,
 		},
 		{
 			path: '/settings',

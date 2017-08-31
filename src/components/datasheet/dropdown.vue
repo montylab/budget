@@ -68,7 +68,7 @@
 
 						if (e.key === 'Enter' && this.filteredItems.length) {
 							e.preventDefault()
-							this.selected()
+							this.selected(e.metaKey)
 						}
 					})
 
@@ -84,7 +84,10 @@
 
 			selected: function(e) {
 				const sel = this.selection
-				this.$emit('select', e && e.target.getAttribute("value") || this.filteredItems[sel].source)
+				this.$emit('select', {
+					value: e && e.target && e.target.getAttribute("value") || this.filteredItems[sel].source,
+					meta: e === true
+				})
 			},
 
 			recalc: function() {

@@ -88,6 +88,10 @@ export default {
 		return moment(date).format(format)
 	},
 
+	fromNow(date) {
+		return moment(date).fromNow()
+	},
+
 	endOfSelectedMonth() {
 		const date = new Date(0)
 		date.setFullYear(this.selected.year)
