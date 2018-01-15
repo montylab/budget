@@ -39,7 +39,11 @@
 
 		data: function() {
 			return {
-				items: [],
+				items: [{
+					id: 0,
+					categoty: '',
+					amount: 0
+				}],
 				categories: [],
 				selectedDate: dateService.current,
 			}
@@ -51,8 +55,7 @@
 			this.service.events.$on('updated', (data) => {
 				this.items = this.service.getItemsArray(this.selectedDate)
 
-				this.categories = data.categories
-
+				this.categories = this.service.getPrioritizedCategories()
 				authService.ready()
 			})
 
@@ -64,7 +67,7 @@
 
 			this.selectedDate = dateService.selected
 			this.items = this.service.getItemsArray(this.selectedDate)
-			this.categories = this.service.getCategories()
+			this.categories = this.service.getPrioritizedCategories()
 		},
 
 		methods: {

@@ -29,23 +29,28 @@
 		computed: {
 			filteredItems: function(flush = true) {
 				let split = this.query.split(':')
-				let filtered = this.items ? this.items.filter(item => item.indexOf(this.query) !== -1) : []
+				let filtered = this.items ? this.items.filter(item => !this.query.trim() || item.name.indexOf(this.query) !== -1) : []
 
-				if (this.query) {
+				if (this.query && this.query.trim()) {
 					filtered = filtered.map(item => ({
-						source: item,
-						value: item.slice(this.query.indexOf(split[split.length - 1] || ':')),
-					}))
+                        source: item.name,
+                        priority: item.priority,
+                        value: item.name.slice(this.query.indexOf(split[split.length - 1] || ':')),
+                    }))
 				} else {
 					filtered = filtered.map(item => ({
-						source: item,
-						value: item,
+						source: item.name,
+						value: item.name,
+						priority: item.priority,
 					}))
 				}
 
 				if (filtered.length === 1 && this.query === filtered[0].source) return []
 
 				if (flush) this.selection = 0
+
+				filtered.sort((a,b) => b.priority-a.priority)
+
 				return filtered
 			},
 
@@ -75,8 +80,23 @@
 					eventsHolder.addEventListener('blur', ()=> {
 						this.mightBeVisible = false
 					})
+
+					eventsHolder.addEventListener('keydown', (e)=> {
+						if (e.metaKey) {
+							if (+e.key > 0 && +e.key < 10) {
+							    e.preventDefault()
+
+                                if (+e.key <= this.filteredItems.length) {
+									this.selection = +e.key - 1
+									this.selected()
+								}
+                            }
+                        }
+					})
+
 					eventsHolder.addEventListener('focus', ()=> {
-						this.mightBeVisible = document.activeElement === this.input
+						this.mightBeVisible = true
+                        this.$forceUpdate()
 						//this.mightBeVisible = document.getSelection().anchorNode.closest('.category')
 					})
 				}
@@ -124,9 +144,8 @@
 </script>
 
 <template>
-	<ul >
+	<ul :class="{maxHeight10: true, open: mightBeVisible && canBeShown}">
 		<li
-			v-if="mightBeVisible && canBeShown"
 			v-for="(item, index) in filteredItems"
 
 			:value="item.source"
@@ -134,6 +153,8 @@
 
 			@mousedown="selected"
 		>
+			<span v-if="index<9" class="hint">⌘ {{index+1}}</span>
+			<!--<span>{{item.priority}}</span>-->
 			{{item.value}}
 		</li>
 	</ul>
@@ -144,17 +165,42 @@
 	ul {
 		position: absolute;
 		top: 35px;
-		left: 0px;
+		left: 0;
 		background: #FFF;
 		padding: 0;
 		margin: 0;
 		list-style: none;
-		box-shadow: 0px 3px 23px -4px #000000;
+		box-shadow: 0 3px 23px -4px #000000;
 		z-index: 9999;
+        transition: all 0.2s;
+
+        opacity: 0;
+        visibility: hidden;
 	}
+
+    .open {
+        opacity: 1;
+        visibility: visible;
+        transition: all .2s .2s;
+    }
+
+
+
+    .hint {
+        float: right;
+    }
+
+    .maxHeight10 {
+        max-height: 295px;
+        overflow: auto;
+    }
 
 	li {
 		padding: 5px 10px;
+	}
+
+	li span {
+		color: #9a9a9a;
 	}
 
 	li:hover, li.selected {

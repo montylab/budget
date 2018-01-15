@@ -9,8 +9,8 @@ export default class ComeService {
     events = new Vue()
 
     data = {
-        categories: null,
-        items: null,
+        categories: [],
+        items: [],
     }
 
     constructor({type}) {
@@ -23,16 +23,34 @@ export default class ComeService {
         }
     }
 
-    getCategories = () => {
-        if (this.data.categories && this.data.categories.length) {
-            return this.data.categories.slice()
+    updated() {
+        // set priority for cats
+        const categoriesRating = {};
+        for (let key in this.data.items) {
+            let item = this.data.items[key]
+			categoriesRating[item.category] = categoriesRating[item.category] ? categoriesRating[item.category]+1 : 1
         }
-        return []
+
+		this.data.categories = this.data.categories.map(item => ({'name': item.name, priority: categoriesRating[item.name]}))
+		this.data.categories = this.data.categories.filter(item => item.priority > 0 && item.name)
+
+
+		this.events.$emit('updated', {
+			items: this.getItemsArray(),
+			categories: this.getCategories(),
+		})
     }
 
+	getCategories = () => {
+        return this.data.categories.filter(item => item.name.trim()).map(item => item.name)
+	}
+
+	getPrioritizedCategories = () => {
+		return this.data.categories.slice()
+	}
+
     getItemsArray = function ({year, month} = {}) {
-        const timestamps = year && month ? dateService.getMonthTimestamps(year,
-            month) : {
+        const timestamps = year && month ? dateService.getMonthTimestamps(year, month) : {
             start: 0,
             end: Infinity,
         }
@@ -49,7 +67,14 @@ export default class ComeService {
             }
         }
         filteredArray.sort((a, b) => a.date - b.date)
-        return filteredArray
+
+        return filteredArray.length ? filteredArray : [{
+            id: utilsService.generateId(10e3),
+            category: '',
+            description: '',
+            amount: 0,
+            date: dateService.endOfSelectedMonth(),
+        }]
     }
 
     addNewItem = (itemOverrides, notLastItem = false) => {
@@ -65,13 +90,8 @@ export default class ComeService {
         }
         this.data.items[id] = item
 
-        //if (!notLastItem) {
         this.dbPushItem(item)
-        this.events.$emit('updated', {
-            items: this.getItemsArray(),
-            categories: this.data.categories,
-        })
-        //}
+        this.updated()
     }
 
     importItems = (items) => {
@@ -81,7 +101,9 @@ export default class ComeService {
     }
 
     changeItem = (item) => {
-        this.data.items[item.id] = item
+		if (JSON.stringify(this.data.items[item.id]) === JSON.stringify(item)) return
+
+        this.data.items[item.id] = {...item}
         this.dbPushItem(item)
     }
 
@@ -89,10 +111,7 @@ export default class ComeService {
         this.dbDeleteItem(id)
         this.data.items[id] = null
         delete this.data.items[id]
-        this.events.$emit('updated', {
-            items: this.getItemsArray(),
-            categories: this.data.categories,
-        })
+		this.updated()
     }
 
     dbFetch = () => {
@@ -105,10 +124,7 @@ export default class ComeService {
         const db = firebase.database()
         db.ref('users/' + uid + '/data/' + this.type).orderByChild('date').once('value').then(snapshot => {
             this.data.items = snapshot.val() || {}
-            this.events.$emit('updated', {
-                items: this.getItemsArray(),
-                categories: this.data.categories,
-            })
+			this.updated()
         })
 
         db.ref('users/' + uid + '/data/categories/' + this.type).once('value').then(snapshot => {
@@ -122,12 +138,12 @@ export default class ComeService {
                 return acc
             }, {})
 
-            this.data.categories = Object.keys(filtered)
+            this.data.categories = Object.keys(filtered).map(item => ({
+                name: item,
+                priority: 0,
+            }))
 
-            this.events.$emit('updated', {
-                items: this.getItemsArray(),
-                categories: this.data.categories,
-            })
+			this.updated()
 
             window.guesser = this.guesser
             this.guessTest()
@@ -144,10 +160,14 @@ export default class ComeService {
         const db = firebase.database()
         db.ref('users/' + uid + '/data/' + this.type + '/' + item.id).set(item)
 
-        if (this.data.categories &&
-            this.data.categories.indexOf(item.category) == -1) {
-            this.data.categories.push(item.category)
-            db.ref('users/' + uid + '/data/categories/' + this.type).set(this.data.categories)
+        // debugger
+        if (!this.data.categories.find(el => item.category == el.name)) {
+            this.data.categories.push({
+				name: item.category,
+				priority: 1
+			})
+            db.ref('users/' + uid + '/data/categories/' + this.type).set(this.getCategories())
+			this.updated()
         }
     }
 
@@ -166,12 +186,19 @@ export default class ComeService {
         })
     }
 
+
+
     generateId = () => Math.abs(~~(Math.random() * 1e15))
+
+    guesserTime = 0
+
     guesser = (phrase) => {
+        const start = +new Date()
+
         // console.time('guesser')
-        if (!this.guessDic) {
+        // if (!this.guessDic) {
             this.generateGuesserDictionary()
-        }
+        // }
 
         const split = phrase
             .replace(/[\.\,\?\-]+/gim, ' ')
@@ -198,7 +225,11 @@ export default class ComeService {
         }
         let guess = name
 
-        // console.timeEnd('guesser')
+
+
+        this.guesserTime += +new Date() - start
+
+        console.log(this.guesserTime + "ms")
         return {
             guess: name,
             phrase,
@@ -215,7 +246,7 @@ export default class ComeService {
 
             const len = split.length
             split.forEach(word => {
-                if (word && item.category) {
+                if (word && item.category && item.category.trim()) {
                     const score = word.length > 4 ? 1 : word.length > 2 ? 0.5 : 0.1
 
                     acc[word] = acc[word] || {}

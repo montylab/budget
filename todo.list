@@ -5,7 +5,9 @@
 +todo [import] replace csv description to human readable
 +todo [import] backup
 @todo [import] autodeteck backup, show controls only in csv mode
-@todo [import] make autoprediction for categories
++todo [import] make autoprediction for categories
++todo [import] sort list of categories
+
 
 
 
@@ -42,3 +44,10 @@
 +todo [ux] focus fix on datasheet line, make clear
 +todo [ux] sign screen make animated text slides
 +todo [ux] make dropdown menu
+
+
+@todo dropdown limit
+@todo dropdown prioritizer
+
+
+@todo arrow up/down swtich between items desc

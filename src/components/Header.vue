@@ -35,7 +35,7 @@
 			},
 			signout() {
 				authService.signout()
-				this.$router.push('/')
+				setTimeout(()=>this.$router.push('/'), 500)
 			},
 
 			tutorial() {

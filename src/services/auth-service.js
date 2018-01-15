@@ -2,13 +2,14 @@ import * as firebase from 'firebase'
 import Vue from 'vue'
 import settingsService from './settings-service'
 
-const config = {
-	apiKey: 'AIzaSyAiosYDEN9e8PwUyNotnUD5YMqBHQmkiKY',
-	authDomain: 'budget-86974.firebaseapp.com',
-	databaseURL: 'https://budget-86974.firebaseio.com',
-	projectId: 'budget-86974',
-	storageBucket: 'budget-86974.appspot.com',
-	messagingSenderId: '98263644403',
+// Initialize Firebase config
+const  config = {
+	apiKey: "AIzaSyAiosYDEN9e8PwUyNotnUD5YMqBHQmkiKY",
+	authDomain: "budget-86974.firebaseapp.com",
+	databaseURL: "https://budget-86974.firebaseio.com",
+	projectId: "budget-86974",
+	storageBucket: "budget-86974.appspot.com",
+	messagingSenderId: "98263644403"
 }
 
 export default {

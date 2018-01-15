@@ -1,303 +1,328 @@
 <script>
-    export default {
-        name: 'app-datasheet-input',
-        props: ['categories', 'description', 'category'],
+	export default {
+		name: 'app-datasheet-input',
+		props: ['categories', 'description', 'category'],
 
-        data: function () {
-            return {
-                input: {
-                    category: this.category || ' ',
-                    description: this.description || ' ',
-                    cursor: {
-                        offset: 0,
-                    },
-                },
-                canLeaveAfter: 0,
-                focusType: 'category', // null || category || description
-            }
-        },
+		data: function () {
+			return {
+				input: {
+					category: this.category || ' ',
+					description: this.description || ' ',
+					cursor: {
+						offset: 0,
+					},
+				},
+				canLeaveAfter: 0,
+				focusType: null, // null || category || description
+			}
+		},
 
-        computed: {
-            splittedCategories: function () {
-                return this.input.category.split(':')
-            },
-            text: function () {
-                return (this.input.category + ' ' + this.input.description).trim()
-            },
-            canDropdown: function () {
-                return this.focusType === 'category'
-            },
-        },
+		computed: {
+			splittedCategories: function () {
+				return this.input.category.split(':')
+			},
+			text: function () {
+				return (this.input.category + ' ' + this.input.description).trim()
+			},
+			canDropdown: function () {
+				return this.focusType === 'category'
+			},
+		},
 
-        watch: {
-            category: function () {
-                this.input.category = this.category
-                this.interpolate()
+		watch: {
+			category: function () {
+				this.input.category = this.category
+				this.interpolate()
 
-            },
-            description: function () {
-                this.input.description = this.description
-                this.interpolate()
-            }
-        },
+			},
+			description: function () {
+				this.input.description = this.description
+				this.interpolate()
+			}
+		},
 
-        mounted: function () {
-            this.interpolate()
-        },
+		mounted: function () {
+			this.interpolate()
+		},
 
-        methods: {
-            emitChange: function () {
-                this.$emit('change', {
-                    category: this.input.category.trim(),
-                    description: this.input.description.trim(),
-                })
-            },
+		methods: {
+			updateFocusType(force) {
+				if (force !== undefined) {
+					this.focusType = force
+					return
+				}
 
-            enterDown: function (e) {
-                e.preventDefault()
+				const offset = this.getCursorAbsoluteIndex()
+				this.focusType = offset <= this.input.category.trim().length ? 'category' : 'description'
+			},
 
-                if (this.focusType === 'description') {
-                    if (this.canLeaveAfter + 150 < +new Date()) {
-                        this.$emit('leave')
-                        this.emitChange()
-                    }
-                } else {
-                    if (e.metaKey) {
-                        try {
-                            const zone = e.target.closest('tr').nextElementSibling.querySelector('.category')
-                            this.selectZone(zone)
-                        } catch (e) {
-                        }
+			emitChange: function () {
+				this.$emit('change', {
+					category: this.input.category.trim(),
+					description: this.input.description.trim(),
+				})
+			},
+
+			enterDown: function (e) {
+				e.preventDefault()
+
+				if (this.focusType === 'description') {
+					if (this.canLeaveAfter + 150 < +new Date()) {
+						this.$emit('leave')
+						this.emitChange()
+					}
+				} else {
+					if (e.metaKey) {
+						try {
+							const zone = e.target.closest('tr').nextElementSibling.querySelector('.category')
+							this.selectZone(zone)
+						} catch (e) {
+						}
 //						debugger
-                        return
-                    }
+						return
+					}
 
-                    this.focusType = 'description'
-                    this.selectZone(this.$el.querySelector('.description'))
-                }
-            },
+					this.updateFocusType('description')
+					this.selectZone(this.$el.querySelector('.description'))
+				}
+			},
 
-            check: function (e) {
-                if (e && e.type === 'keyup' && e.metaKey) return
+			check: function (e) {
+				if (e && e.type === 'keyup' && e.metaKey) return
 
-                const value = this.normalizeString(this.$refs.textfield.innerText).trim()
-                const category = value.split(' ')[0]
-                const description = (value.indexOf(' ') !== -1 ? value.slice(value.indexOf(' ') + 1) : '') || ' '
+				const innerText = this.normalizeString(this.$refs.textfield.innerText)
+				const value = innerText.trim()
 
-                this.input.cursor.offset = this.getCursorAbsoluteIndex()
-                console.log(this.input.cursor.offset)
-                if (this.input.cursor.offset) {
-                    this.focusType = this.input.cursor.offset > category.length ? 'description' : this.focusType = 'category'
-                }
+				let category, description
+				if (innerText && innerText[0] === ' ') {
+					category = ' '
+					description = value || ' '
+					this.input.cursor.offset = this.getCursorAbsoluteIndex() == 2 ? 3 : this.getCursorAbsoluteIndex()
+				} else {
+					category = value.split(' ')[0]
+					description = (value.indexOf(' ') !== -1 ? value.slice(value.indexOf(' ') + 1) : '') || ' '
+					this.input.cursor.offset = this.getCursorAbsoluteIndex()
+				}
 
-                if (this.sameString(value, this.text)) {
-                    return false
-                } else {
-                    this.change({category, description});
-                }
-            },
 
-            change: function ({category, description}) {
-                console.log('change!')
-                if (category !== undefined) {
-                    this.input.category = this.normalizeString(category)
-                }
-                if (description !== undefined) {
-                    this.input.description = this.normalizeString(description)
-                }
 
-                this.interpolate()
+				this.updateFocusType()
 
-                if (!!document.activeElement.closest('.categoryInput')) {
-                    this.setCursorAbsoluteIndex()
-                }
+				if (this.sameString(value, this.text)) {
+					return false
+				} else {
+					this.change({category, description})
+				}
+			},
 
-                this.emitChange()
-            },
+			change: function ({category, description}) {
+				console.log('change!')
+				if (category !== undefined) {
+					this.input.category = this.normalizeString(category)
+				}
+				if (description !== undefined) {
+					this.input.description = this.normalizeString(description)
+				}
 
-            blur: function (e) {
-                this.canLeaveAfter = +new Date()
-                this.check()
-            },
+				this.interpolate()
 
-            focus() {
-                if (!this.text) {
-                    this.selectCategory()
-                }
-            },
+				if (!!document.activeElement.closest('.categoryInput')) {
+					this.setCursorAbsoluteIndex()
+				}
+			},
 
-            interpolate: function () {
+			blur: function (e) {
+				this.canLeaveAfter = +new Date()
+				this.updateFocusType(null)
+				this.check()
+				this.emitChange()
+			},
+
+			focus() {
+				if (!this.text || !this.category.trim()) {
+					setTimeout(()=>this.setCursorAbsoluteIndex(0))
+				}
+
+				setTimeout(()=>this.updateFocusType(), 50)
+				setTimeout(()=>this.updateFocusType(), 150)
+				setTimeout(()=>this.updateFocusType(), 250)
+			},
+
+			interpolate: function () {
 //				console.log('interpolate');
 
-                let {description} = this.input
+				let {description} = this.input
 
-                let categoryTemplate = this.splittedCategories.reduce((acc, item) => {
-                    item = item || ' '
-                    return acc += `<span class="subcategory">${item}</span>:`
-                }, '')
-                categoryTemplate = categoryTemplate.replace(/:$/, '')
+				let categoryTemplate = this.splittedCategories.reduce((acc, item) => {
+					item = item || ' '
+					return acc += `<span class="subcategory">${item}</span>:`
+				}, '')
+				categoryTemplate = categoryTemplate.replace(/:$/, '')
 
-                let template = `<span class="category">${categoryTemplate}</span><span class="separator"> </span><span class="description">${description}</span>`
+				let template = `<span class="category">${categoryTemplate}</span><span class="separator"> </span><span class="description">${description}</span>`
 
-                if (this.sameString(this.$refs.textfield.innerHTML, template)) {
-                    return
-                }
+				if (this.sameString(this.$refs.textfield.innerHTML, template)) {
+					return
+				}
 
 //				console.log('interpolate done');
-                this.$refs.textfield.innerHTML = template
-            },
+				this.$refs.textfield.innerHTML = template
+			},
 
-            sameString: function (a, b) {
-                return this.normalizeString(a) === this.normalizeString(b)
-            },
+			sameString: function (a, b) {
+				return this.normalizeString(a) === this.normalizeString(b)
+			},
 
-            normalizeString(str) {
-                return str.replace(/\s|&nbsp;/gim, ' ')
-            },
+			normalizeString(str) {
+				return str.replace(/\s|&nbsp;/gim, ' ')
+			},
 
-            getCursorAbsoluteIndex: function (node = this.$refs.textfield) {
-                if (!document.getSelection().anchorNode) return
+			getCursorAbsoluteIndex: function (node = this.$refs.textfield) {
+				if (!document.getSelection().baseNode) return
 
-                let selectedNode = document.getSelection().anchorNode
-                if (selectedNode.childNodes.length) {
-                    selectedNode = selectedNode.childNodes[0]
-                }
+				let selectedNode = document.getSelection().baseNode
+				while (selectedNode.childNodes.length) {
 
-                let offset = document.getSelection().anchorOffset
+					if (selectedNode.childNodes.length) {
+						selectedNode = selectedNode.childNodes[0]
+					}
+				}
 
-                const map = this.roadmap()
-                for (let i = 0; i < map.length; i++) {
-                    if ((map[i].node === selectedNode )) { //|| map[i].node === selectedNode.parentNode    && map[i].offset === offset
-                        console.info()
-                        return i + offset
-                    }
-                }
+				let offset = document.getSelection().baseOffset
 
-                console.log('undefined position')
-                return 0
-            },
+				const map = this.roadmap()
+				for (let i = 0; i < map.length; i++) {
+					if ((map[i].node === selectedNode )) { //|| map[i].node === selectedNode.parentNode    && map[i].offset === offset
+						console.info()
+						return i + offset
+					}
+				}
 
-            setCursorAbsoluteIndex: function (index = this.input.cursor.offset) {
+				console.log('undefined position')
+				return 0
+			},
+
+			setCursorAbsoluteIndex: function (index = this.input.cursor.offset) {
 //				console.log('setCursorAbsoluteIndex')
-                const map = this.roadmap()
-                if (map.length > index) {
-                    const pos = map[index]
-                    this.setFocus(pos.node, pos.offset)
-                } else {
-                    this.setFocus()
-                }
-            },
+				const map = this.roadmap()
+				if (map.length > index) {
+					const pos = map[index]
+					this.setFocus(pos.node, pos.offset)
+				} else {
+					this.setFocus()
+				}
 
-            roadmap: function (root, offset = 0) {
-                const el = root || this.$refs.textfield
-                const roadmap = []
+				this.updateFocusType()
+			},
 
-                if (!el.childNodes.length) {
-                    for (let i = 0; i < el.length; i++) {
-                        roadmap.push({
-                            offset: i,
-                            node: el,
-                        })
-                    }
+			roadmap: function (root, offset = 0) {
+				const el = root || this.$refs.textfield
+				const roadmap = []
 
-                    return roadmap
-                }
-                if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
-                    return this.roadmap(el.childNodes[0], offset)
-                }
+				if (!el.childNodes.length) {
+					for (let i = 0; i < el.length; i++) {
+						roadmap.push({
+							offset: i,
+							node: el,
+						})
+					}
 
-                el.childNodes.forEach((item) => {
-                    if (item.childNodes && item.childNodes.length) {
-                        if (item.childNodes.length > 1) {
-                            item.childNodes.forEach(elem => {
-                                roadmap.push(...this.roadmap(elem, offset))
-                                offset = roadmap.length
-                            })
-                        } else {
-                            roadmap.push(...this.roadmap(item.childNodes[0], offset))
+					return roadmap
+				}
+				if (el.childNodes.length === 1 && el.childNodes[0].nodeType === 3) {
+					return this.roadmap(el.childNodes[0], offset)
+				}
 
-                        }
-                    }
-                })
+				el.childNodes.forEach((item) => {
+					if (item.childNodes && item.childNodes.length) {
+						if (item.childNodes.length > 1) {
+							item.childNodes.forEach(elem => {
+								roadmap.push(...this.roadmap(elem, offset))
+								offset = roadmap.length
+							})
+						} else {
+							roadmap.push(...this.roadmap(item.childNodes[0], offset))
+
+						}
+					}
+				})
 
 //                console.log(roadmap)
-                return roadmap
-            },
+				return roadmap
+			},
 
-            setFocus: function (node = this.$refs.textfield, offset, focusOn = this.$refs.textfield) {
-                //console.log('set focus')
-                const range = new Range()
+			setFocus: function (node = this.$refs.textfield, offset, focusOn = this.$refs.textfield) {
+				//console.log('set focus')
+				const range = new Range()
 
-                if (node.textContent.trim()) {
-                    range.setStart(node, offset || node.childNodes.length)
-                    range.setEnd(node, offset || node.childNodes.length)
-                } else {
-                    range.setStart(node, 0)
-                    range.setEnd(node, 0)
-                }
-                const sel = window.getSelection()
-                sel.removeAllRanges()
-                sel.addRange(range)
+				if (node.textContent.trim()) {
+					range.setStart(node, offset || node.childNodes.length)
+					range.setEnd(node, offset || node.childNodes.length)
+				} else {
+					range.setStart(node, 0)
+					range.setEnd(node, 0)
+				}
+				const sel = window.getSelection()
+				sel.removeAllRanges()
+				sel.addRange(range)
 
-                focusOn.focus()
-            },
+				focusOn.focus()
 
-            selectZone: function (zone) {
-//				console.log('select zone',  zone)
-//                setTimeout(() => {
-                    try {
-                        if (!zone) return
-                        this.setFocus(zone.closest('pre'))
+				this.updateFocusType()
+			},
 
-                        const node = zone
-                        const end = node.childNodes.length
+			selectZone: function (zone) {
+				try {
+					if (!zone) return
+					//this.setFocus(zone.closest('pre'))
 
-                        const range = new Range()
+					const node = zone
+					const end = node.childNodes.length
 
-                        range.setStart(node, 0)
-                        range.setEnd(node, end)
+					const range = new Range()
 
-                        const sel = window.getSelection()
-                        sel.removeAllRanges()
-                        sel.addRange(range)
+					range.setStart(node, 0)
+					range.setEnd(node, end)
 
-                        zone.closest('pre').focus()
-                    } catch (e) {
-                        console.warn(e)
-                    }
-//                }, 50)
-            },
+					const sel = window.getSelection()
+					sel.removeAllRanges()
+					sel.addRange(range)
 
-            selectCategory: function () {
-                this.focusType = 'category'
-                this.selectZone(this.$el.querySelector('.category'))
-            },
+					zone.closest('pre').focus()
+				} catch (e) {
+					console.warn(e)
+				}
+			},
 
-            selectDescription: function () {
-                this.focusType = 'description'
-                this.selectZone(this.$el.querySelector('.description'))
-            },
+			selectCategory: function () {
+				this.updateFocusType('category')
+				this.selectZone(this.$el.querySelector('.category'))
+			},
 
-            dropdownSelect: function ({value, meta}) {
-                this.change({category: value})
+			selectDescription: function () {
+				this.updateFocusType('description')
+				this.selectZone(this.$el.querySelector('.description'))
+			},
 
-                if (meta) {
-                    try {
-                        const zone = this.$refs.textfield.closest('tr').nextElementSibling.querySelector('.category')
-                        this.selectZone(zone)
-                    } catch (e) {
-                    }
-                } else {
-                    setTimeout(() => {
-                        this.focusType = 'description'
-                        this.selectZone(this.$el.querySelector('.description'))
-                    }, 100)
-                }
+			dropdownSelect: function ({value, meta}) {
+				this.change({category: value})
 
-                this.canLeaveAfter = +new Date() + 100
-            }
-        },
-    }
+				if (meta) {
+					try {
+						const zone = this.$refs.textfield.closest('tr').nextElementSibling.querySelector('.category')
+						this.selectZone(zone)
+					} catch (e) {
+					}
+				} else {
+					setTimeout(() => {
+						this.selectDescription()
+					}, 100)
+				}
+
+				this.canLeaveAfter = +new Date() + 100
+			}
+		},
+	}
 </script>
 
 <template>

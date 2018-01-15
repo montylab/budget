@@ -51,7 +51,7 @@
 
 	export default {
 		name: 'app-datasheet-widget',
-		props: ['items', 'title', 'categories', 'selectedDate'],
+		props: ['items', 'title', 'categories', 'selectedDate', 'allowNew', 'emptyMode'],
 
 		methods: {
 			itemChange: function (item) {

@@ -28,6 +28,7 @@ import Checkbox from '@/components/controls/Checkbox'
 import SummaryChart from '@/components/Statistic/SummaryChart'
 import InOutChart from '@/components/Statistic/InOutChart.vue'
 import CategoryPieChart from '@/components/Statistic/CategoryPieChart'
+import CategoryBarChart from '@/components/Statistic/CategoryBarChart'
 
 import Datasheet from '@/components/datasheet'
 import ServicedDatasheet from '@/components/datasheet/serviced'
@@ -77,6 +78,7 @@ Vue.component('app-controls-checkbox', Checkbox)
 Vue.component('app-chart-summary', SummaryChart)
 Vue.component('app-chart-in-out', InOutChart)
 Vue.component('app-chart-category-pie', CategoryPieChart)
+Vue.component('app-chart-category-bar', CategoryBarChart)
 
 
 

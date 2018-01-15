@@ -109,20 +109,29 @@
 
 				result: null,
 				file: null,
+
 				step: 0,
 				currencyService,
+
+				isFileDropped: false,
+				filetype: null // null // csv // backup
 			}
 		},
 
 		computed: {
-			positiveDatasheetItems() {
-				return this.datasheetItems.filter(item => item.amount >= 0)
+			positiveDatasheetItems: {
+				get() {
+					return this.datasheetItems.filter(item => item.amount >= 0)
+				},
+				set(value) {
+				}
 			},
-			negativeDatasheetItems() {
-				return this.datasheetItems.filter(item => item.amount < 0).map(item => ({
-					...item,
-					amount: -1 * item.amount,
-				}))
+			negativeDatasheetItems: {
+				get() {
+					return this.datasheetItems.filter(item => item.amount < 0).map(item => ({...item, amount: -item.amount}))
+				},
+				set(value) {
+				}
 			},
 
 			categories() {
@@ -131,7 +140,7 @@
 		},
 
 		watch: {
-			result: function() {
+			result: function () {
 				if (this.result !== null) {
 					setTimeout(() => {
 						this.result = null
@@ -142,21 +151,25 @@
 
 			settings: {
 				deep: true,
-				handler() {this.settingsChanged()},
+				handler() {
+					this.settingsChanged()
+				},
 			}
 		},
 
-		created: function() {
+		created: function () {
 			outcomeService.events.$on('updated', (data) => {
 				this.categoriesOutcome = data.categories
+				this.categoriesOutcome = outcomeService.getPrioritizedCategories()
 			})
 
 			incomeService.events.$on('updated', (data) => {
 				this.categoriesIncome = data.categories
+				this.categoriesIncome = incomeService.getPrioritizedCategories()
 			})
 
-			this.categoriesOutcome = outcomeService.getCategories()
-			this.categoriesIncome = incomeService.getCategories()
+			this.categoriesOutcome = outcomeService.getPrioritizedCategories()
+			this.categoriesIncome = incomeService.getPrioritizedCategories()
 
 			settingsService.events.$on('updated', ({settings}) => {
 				this.settings = {
@@ -170,7 +183,7 @@
 			}
 		},
 
-		mounted: function() {
+		mounted: function () {
 			this.parse()
 
 			new Dropzone('div#file', {
@@ -191,7 +204,7 @@
 				this.step = 0
 			},
 
-			parse: function(parsed) {
+			parse: function (parsed) {
 				const result = parsed || papaParse.parse(testinput)
 
 				const len = {}
@@ -222,7 +235,7 @@
 				return this.raw
 			},
 
-			rawToDatasheet: function() {
+			rawToDatasheet: function () {
 				const cur = this.raw.mapColumns.indexOf('currency')
 				const cat = this.raw.mapColumns.indexOf('category')
 				const dat = this.raw.mapColumns.indexOf('date')
@@ -272,11 +285,13 @@
 						item.category = outcomeService.guesser(item.description).guess || ''
 					}
 				})
-
 			},
 
 
-			importData: function() {
+			importData: function () {
+				this.step = 0
+				this.filetype = null
+
 				switch (this.settings.type) {
 					case 'income' :
 						this.importCome(incomeService)
@@ -293,7 +308,7 @@
 				}
 			},
 
-			importCome: function(service, data = this.datasheetItems) {
+			importCome: function (service, data = this.datasheetItems) {
 				service.importItems(data).then((result) => {
 					this.result = result
 
@@ -304,21 +319,14 @@
 				})
 			},
 
-			processFile: function(file) {
+			processFile: function (file) {
+				this.isFileDropped = true
 				this.file = file
 
-				if (this.settings.type === 'backup') {
-					this.readToBackup(file)
-				} else {
-					papaParse.parse(file, {
-						complete: (results) => {
-							this.parse(results)
-						},
-					})
-				}
+				this.readFile(file)
 			},
 
-			readToBackup: function handleFileSelect(evt) {
+			readFile(evt) {
 				const files = evt instanceof File ? [evt] : evt.target.files
 
 				const output = []
@@ -327,11 +335,18 @@
 					reader.onload = (theFile => {
 						return (e) => {
 							try {
-								const json = JSON.parse(e.target.result)
-								importService.importBackup(json).then((result) => {
-									this.result = result
-									importService.updateApp()
-								})
+								try {
+									const data = JSON.parse(e.target.result)
+									if (data && typeof data === 'object' && data.backup) {
+										this.filetype = 'backup'
+										this.readToBackup(data)
+									} else {
+										this.result = false
+                                    }
+                                } catch (err) {
+									this.filetype = 'csv'
+									this.readToParser(e.target.result)
+                                }
 							} catch (ex) {
 								this.result = false
 							}
@@ -341,20 +356,37 @@
 				}
 			},
 
-			replaceModalCheck: function() {
+			readToBackup(json) {
+				importService.importBackup(json).then((result) => {
+					this.result = result ? 'Backup applied succesfully' : false
+					importService.updateApp()
+				})
+			},
+
+			readToParser(data) {
+				papaParse.parse(data, {
+					complete: (results) => {
+						this.parse(results)
+					},
+				})
+			},
+
+			replaceModalCheck: function () {
 				setTimeout(() => {
 					this.settings.replace && this.$refs.modalReplace.open()
 				}, 100)
 
 			},
 
-			deleteItem({id}) {
-				this.raw.data = this.raw.data.filter(row => row.id != id)
+			deleteItem(item) {
+				this.raw.data = this.raw.data.filter(row => row.id != item.id)
+				this.datasheetItems = this.datasheetItems.filter(row => row.id != item.id)
+				this.positiveDatasheetItems = this.positiveDatasheetItems.filter(row => row.id != item.id)
+				this.negativeDatasheetItems = this.negativeDatasheetItems.filter(row => row.id != item.id)
 			},
 
 			changeItem(item) {
-				this.cnt = this.cnt || 0;
-				console.log(this.cnt++)
+				this.cnt = this.cnt || 0
 
 				let index = this.datasheetItems.findIndex(({id}) => id === item.id)
 				if (index != -1) {
@@ -371,761 +403,757 @@
 					this.negativeDatasheetItems[index] = item
 				}
 
-				//debugger
 			},
 		},
 	}
 </script>
 
 <template>
-	<div class="widget import-widget">
+    <div class="widget import-widget">
 
-		<div id="file" class="dropper">
-			<div class="fallback">
-				<input name="file" type="file" :accept="settings.type === 'backup' ? 'application/json' : '*/*'"/>
-			</div>
+        <div id="file" :class="{dropper: true, dropped: isFileDropped, fullscreen: filetype !== 'csv'}">
+            <div class="fallback">
+                <input name="file" type="file" :accept="settings.type === 'backup' ? 'application/json' : '*/*'"/>
+            </div>
 
-			<h1>Choose file or drop it here</h1>
-			<div class="filename" v-if="file">{{file.name}}</div>
-		</div>
+            <h1>Choose file or drop it here</h1>
+            <div class="filename" v-if="file">{{file.name}}</div>
+        </div>
 
+        <div class="message" v-if="result !== null">
+            <div class="success" v-if="result">
+                {{result}}
+            </div>
+            <div class="error" v-else>
+                Error, try again
+            </div>
+        </div>
 
-		<div class="flexGroup">
-			<div class="flex">
-				<h1>Choose import type</h1>
-				<app-controls-radio
-					v-model="settings.type"
-					name="type"
-					val="smart"
-					title="Smart Mode"
-				></app-controls-radio>
-				<app-controls-radio
-					v-model="settings.type"
-					name="type"
-					val="income"
-					title="Income"
-				></app-controls-radio>
-				<app-controls-radio
-					v-model="settings.type"
-					name="type"
-					val="outcome"
-					title="Outcome"
-				></app-controls-radio>
-				<app-controls-radio
-					v-model="settings.type"
-					name="type"
-					val="backup"
-					title="Backup"
-				></app-controls-radio>
-			</div>
-			<div class="flex">
-				<h1>Options</h1>
+        <div class="csv-mode" v-if="filetype === 'csv'">
+            <div class="flexGroup" v-if="step === 0">
+                <div class="flex">
+                    <h1>Choose import type</h1>
+                    <app-controls-radio
+                            v-model="settings.type"
+                            name="type"
+                            val="smart"
+                            title="Smart Mode"
+                    ></app-controls-radio>
+                    <app-controls-radio
+                            v-model="settings.type"
+                            name="type"
+                            val="income"
+                            title="Income"
+                    ></app-controls-radio>
+                    <app-controls-radio
+                            v-model="settings.type"
+                            name="type"
+                            val="outcome"
+                            title="Outcome"
+                    ></app-controls-radio>
+                </div>
+                <div class="flex">
+                    <h1>Options</h1>
 
-				<app-settings-replace-switcher-widget
-					@click.native="replaceModalCheck"></app-settings-replace-switcher-widget>
+                    <app-settings-replace-switcher-widget
+                            @click.native="replaceModalCheck"></app-settings-replace-switcher-widget>
 
-				<app-controls-switcher v-model="settings.translitConversion"
-									   title="Translit to Russian Conversion"></app-controls-switcher>
-				<app-controls-switcher v-model="settings.inverse" title="Inverse amount column"></app-controls-switcher>
+                    <app-controls-switcher v-model="settings.translitConversion"
+                                           title="Translit to Russian Conversion"></app-controls-switcher>
+                    <app-controls-switcher v-model="settings.inverse" title="Inverse amount column"></app-controls-switcher>
 
-				<app-autocategoriser></app-autocategoriser>
+                    <app-autocategoriser></app-autocategoriser>
 
-				<div>
-					<label>
-						<select v-model="settings.defaultCurrency">
-							Default currency:
-							<option
-								v-for="currency in currencyService.currencyList"
-								:value="currency">
-								{{currency}}
-							</option>
-						</select>
-					</label>
-				</div>
-			</div>
-		</div>
+                    <div>
+                        <label>
+                            <select v-model="settings.defaultCurrency">
+                                Default currency:
+                                <option
+                                        v-for="currency in currencyService.currencyList"
+                                        :value="currency">
+                                    {{currency}}
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+            </div>
 
-		<div v-if="settings.type != 'backup'">
-			<div class="tableContainer">
-				<app-csv-table-widget v-model="raw" v-if="step === 0"></app-csv-table-widget>
-
-
-				<div v-if="step === 1">
-					<div v-if="settings.type === 'smart'">
-						<div v-if="negativeDatasheetItems.length">
-							<h1>Income</h1>
-							<app-datasheet-widget
-								:items="negativeDatasheetItems"
-								:categories="categoriesIncome"
-								title="income"
-								@delete="deleteItem"
-								@change="changeItem"
-							></app-datasheet-widget>
-						</div>
-						<div v-if="positiveDatasheetItems.length">
-							<h1>Outcome</h1>
-							<app-datasheet-widget
-								:items="positiveDatasheetItems"
-								:categories="categoriesOutcome"
-								title="outcome"
-								@delete="deleteItem"
-								@change="changeItem"
-							></app-datasheet-widget>
-						</div>
-					</div>
-
-					<app-datasheet-widget
-						v-else
-						:items="datasheetItems"
-						:categories="categories"
-						@delete="deleteItem"
-						@change="changeItem"
-					></app-datasheet-widget>
+            <div>
+                <div class="tableContainer">
+                    <app-csv-table-widget v-model="raw" v-if="step === 0"></app-csv-table-widget>
 
 
-				</div>
+                    <div v-if="step === 1">
+                        <div v-if="settings.type === 'smart'">
+                            <div v-if="negativeDatasheetItems.length">
+                                <h1>Income</h1>
+                                <app-datasheet-widget
+                                        :items="negativeDatasheetItems"
+                                        :categories="categoriesIncome"
+                                        title="income"
+                                        @delete="deleteItem"
+                                        @change="changeItem"
+                                ></app-datasheet-widget>
+                            </div>
+                            <div v-if="positiveDatasheetItems.length">
+                                <h1>Outcome</h1>
+                                <app-datasheet-widget
+                                        :items="positiveDatasheetItems"
+                                        :categories="categoriesOutcome"
+                                        title="outcome"
+                                        @delete="deleteItem"
+                                        @change="changeItem"
+                                ></app-datasheet-widget>
+                            </div>
+                        </div>
 
-			</div>
+                        <app-datasheet-widget
+                                v-else
+                                :items="datasheetItems"
+                                :categories="categories"
+                                @delete="deleteItem"
+                                @change="changeItem"
+                        ></app-datasheet-widget>
+                    </div>
+                </div>
 
-			<div class="btns">
-				<a class="btn" @click="proceed" v-if="step === 0">Proceed</a>
-				<a class="btn btn-dark" @click="back" v-if="step === 1">Back</a>
-				<a class="btn" @click="importData" v-if="step === 1">Import</a>
-			</div>
-		</div>
+                <div class="btns">
+                    <a class="btn" @click="proceed" v-if="step === 0">Proceed</a>
+                    <a class="btn btn-dark" @click="back" v-if="step === 1">Back</a>
+                    <a class="btn" @click="importData" v-if="step === 1">Import</a>
+                </div>
+            </div>
 
-
-		<div class="message" v-if="result !== null">
-			<div class="success" v-if="result">
-				Success
-			</div>
-			<div class="error" v-else>
-				Error, try again
-			</div>
-		</div>
-
-		<app-modal-widget ref="modalReplace">
-			<app-settings-replace-widget></app-settings-replace-widget>
-		</app-modal-widget>
-	</div>
+            <app-modal-widget ref="modalReplace">
+                <app-settings-replace-widget></app-settings-replace-widget>
+            </app-modal-widget>
+        </div>
+    </div>
 </template>
 
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
-	.widget {
-		width: 100%;
-		padding-bottom: 10px;
-	}
+    .widget {
+        width: 100%;
+        padding-bottom: 10px;
+    }
 
-	.tableContainer {
-		width: 100%;
-	}
+    .tableContainer {
+        width: 100%;
+    }
 
-	h1, h2 {
-		font-weight: normal;
-		margin: 10px 0
-	}
+    h1, h2 {
+        font-weight: normal;
+        margin: 10px 0
+    }
 
-	.section {
-		margin: 0 0 40px
-	}
+    .section {
+        margin: 0 0 40px
+    }
 
-	.dropper {
-		border: 2px dashed #fff;
-		background: transparent;
-		width: 100%;
-		height: 100px;
-		margin-bottom: 40px;
-		display: flex;
-		justify-content: center;
-		text-align: center;
-		flex-direction: column;
-		box-sizing: border-box;
-	}
+    .dropper {
+        position: fixed;
+        top: 100px;
+        bottom: 40px;
+        left: 40px;
+        right: 40px;
 
-	.dropper:hover {
-		cursor: pointer;
-	}
+        z-index: -1;
 
-	.dropper > * {
-		z-index: -1;
-		position: relative;
-	}
+        border: 2px dashed #fff;
+        background: transparent;
+        display: flex;
+        justify-content: center;
+        text-align: center;
+        flex-direction: column;
+        box-sizing: border-box;
+    }
 
-	ul {
-		list-style-type: none;
-		padding: 0;
-	}
+    .dropper:hover {
+        cursor: pointer;
+    }
 
-	li {
-		display: inline-block;
-		margin: 0 10px;
-	}
+    .dropper > * {
+        z-index: -1;
+        position: relative;
+    }
 
-	a {
-		color: #42b983;
-	}
+    ul {
+        list-style-type: none;
+        padding: 0;
+    }
 
-	.btns {
-		margin-top: 20px;
-		display: flex;
-		justify-content: flex-end;
-	}
+    li {
+        display: inline-block;
+        margin: 0 10px;
+    }
 
-	.btns .btn {
-		margin-left: 40px;
-	}
+    a {
+        color: #42b983;
+    }
 
-	.message {
-		background: #FFF;
-		padding: 20px;
-		margin: 20px 0;
-		font-size: 16px;
-		opacity: 1;
-		transition: all 5s 2s;
-		animation: fadeout 5s;
-	}
+    .btns {
+        margin-top: 20px;
+        display: flex;
+        justify-content: flex-end;
+    }
 
-	@keyframes fadeout {
-		0% {
-			opacity: 0
-		}
-		5% {
-			opacity: 1
-		}
-		75% {
-			opacity: 1
-		}
-		100% {
-			opacity: 0
-		}
-	}
+    .btns .btn {
+        margin-left: 40px;
+    }
 
-	.success {
-		color: #00bcd4;
-	}
+    .message {
+        background: #FFF;
+        padding: 20px;
+        margin: 20px 0;
+        font-size: 16px;
+        opacity: 1;
+        transition: all 5s 2s;
+        animation: fadeout 5s;
+    }
 
-	.error {
-		color: coral;
-	}
+    @keyframes fadeout {
+        0% {
+            opacity: 0
+        }
+        5% {
+            opacity: 1
+        }
+        75% {
+            opacity: 1
+        }
+        100% {
+            opacity: 0
+        }
+    }
+
+    .success {
+        color: #00bcd4;
+    }
+
+    .error {
+        color: coral;
+    }
 
 
 </style>
 
 
 <style scoped>
-	/*
+
+    /*
  * The MIT License
  * Copyright (c) 2012 Matias Meno <m@tias.me>
  */
-	@-webkit-keyframes passing-through {
-		0% {
-			opacity: 0;
-			-webkit-transform: translateY(40px);
-			-moz-transform: translateY(40px);
-			-ms-transform: translateY(40px);
-			-o-transform: translateY(40px);
-			transform: translateY(40px);
-		}
-		30%, 70% {
-			opacity: 1;
-			-webkit-transform: translateY(0px);
-			-moz-transform: translateY(0px);
-			-ms-transform: translateY(0px);
-			-o-transform: translateY(0px);
-			transform: translateY(0px);
-		}
-		100% {
-			opacity: 0;
-			-webkit-transform: translateY(-40px);
-			-moz-transform: translateY(-40px);
-			-ms-transform: translateY(-40px);
-			-o-transform: translateY(-40px);
-			transform: translateY(-40px);
-		}
-	}
+    @-webkit-keyframes passing-through {
+        0% {
+            opacity: 0;
+            -webkit-transform: translateY(40px);
+            -moz-transform: translateY(40px);
+            -ms-transform: translateY(40px);
+            -o-transform: translateY(40px);
+            transform: translateY(40px);
+        }
+        30%, 70% {
+            opacity: 1;
+            -webkit-transform: translateY(0px);
+            -moz-transform: translateY(0px);
+            -ms-transform: translateY(0px);
+            -o-transform: translateY(0px);
+            transform: translateY(0px);
+        }
+        100% {
+            opacity: 0;
+            -webkit-transform: translateY(-40px);
+            -moz-transform: translateY(-40px);
+            -ms-transform: translateY(-40px);
+            -o-transform: translateY(-40px);
+            transform: translateY(-40px);
+        }
+    }
 
-	@-moz-keyframes passing-through {
-		0% {
-			opacity: 0;
-			-webkit-transform: translateY(40px);
-			-moz-transform: translateY(40px);
-			-ms-transform: translateY(40px);
-			-o-transform: translateY(40px);
-			transform: translateY(40px);
-		}
-		30%, 70% {
-			opacity: 1;
-			-webkit-transform: translateY(0px);
-			-moz-transform: translateY(0px);
-			-ms-transform: translateY(0px);
-			-o-transform: translateY(0px);
-			transform: translateY(0px);
-		}
-		100% {
-			opacity: 0;
-			-webkit-transform: translateY(-40px);
-			-moz-transform: translateY(-40px);
-			-ms-transform: translateY(-40px);
-			-o-transform: translateY(-40px);
-			transform: translateY(-40px);
-		}
-	}
+    @-moz-keyframes passing-through {
+        0% {
+            opacity: 0;
+            -webkit-transform: translateY(40px);
+            -moz-transform: translateY(40px);
+            -ms-transform: translateY(40px);
+            -o-transform: translateY(40px);
+            transform: translateY(40px);
+        }
+        30%, 70% {
+            opacity: 1;
+            -webkit-transform: translateY(0px);
+            -moz-transform: translateY(0px);
+            -ms-transform: translateY(0px);
+            -o-transform: translateY(0px);
+            transform: translateY(0px);
+        }
+        100% {
+            opacity: 0;
+            -webkit-transform: translateY(-40px);
+            -moz-transform: translateY(-40px);
+            -ms-transform: translateY(-40px);
+            -o-transform: translateY(-40px);
+            transform: translateY(-40px);
+        }
+    }
 
-	@keyframes passing-through {
-		0% {
-			opacity: 0;
-			-webkit-transform: translateY(40px);
-			-moz-transform: translateY(40px);
-			-ms-transform: translateY(40px);
-			-o-transform: translateY(40px);
-			transform: translateY(40px);
-		}
-		30%, 70% {
-			opacity: 1;
-			-webkit-transform: translateY(0px);
-			-moz-transform: translateY(0px);
-			-ms-transform: translateY(0px);
-			-o-transform: translateY(0px);
-			transform: translateY(0px);
-		}
-		100% {
-			opacity: 0;
-			-webkit-transform: translateY(-40px);
-			-moz-transform: translateY(-40px);
-			-ms-transform: translateY(-40px);
-			-o-transform: translateY(-40px);
-			transform: translateY(-40px);
-		}
-	}
+    @keyframes passing-through {
+        0% {
+            opacity: 0;
+            -webkit-transform: translateY(40px);
+            -moz-transform: translateY(40px);
+            -ms-transform: translateY(40px);
+            -o-transform: translateY(40px);
+            transform: translateY(40px);
+        }
+        30%, 70% {
+            opacity: 1;
+            -webkit-transform: translateY(0px);
+            -moz-transform: translateY(0px);
+            -ms-transform: translateY(0px);
+            -o-transform: translateY(0px);
+            transform: translateY(0px);
+        }
+        100% {
+            opacity: 0;
+            -webkit-transform: translateY(-40px);
+            -moz-transform: translateY(-40px);
+            -ms-transform: translateY(-40px);
+            -o-transform: translateY(-40px);
+            transform: translateY(-40px);
+        }
+    }
 
-	@-webkit-keyframes slide-in {
-		0% {
-			opacity: 0;
-			-webkit-transform: translateY(40px);
-			-moz-transform: translateY(40px);
-			-ms-transform: translateY(40px);
-			-o-transform: translateY(40px);
-			transform: translateY(40px);
-		}
-		30% {
-			opacity: 1;
-			-webkit-transform: translateY(0px);
-			-moz-transform: translateY(0px);
-			-ms-transform: translateY(0px);
-			-o-transform: translateY(0px);
-			transform: translateY(0px);
-		}
-	}
+    @-webkit-keyframes slide-in {
+        0% {
+            opacity: 0;
+            -webkit-transform: translateY(40px);
+            -moz-transform: translateY(40px);
+            -ms-transform: translateY(40px);
+            -o-transform: translateY(40px);
+            transform: translateY(40px);
+        }
+        30% {
+            opacity: 1;
+            -webkit-transform: translateY(0px);
+            -moz-transform: translateY(0px);
+            -ms-transform: translateY(0px);
+            -o-transform: translateY(0px);
+            transform: translateY(0px);
+        }
+    }
 
-	@-moz-keyframes slide-in {
-		0% {
-			opacity: 0;
-			-webkit-transform: translateY(40px);
-			-moz-transform: translateY(40px);
-			-ms-transform: translateY(40px);
-			-o-transform: translateY(40px);
-			transform: translateY(40px);
-		}
-		30% {
-			opacity: 1;
-			-webkit-transform: translateY(0px);
-			-moz-transform: translateY(0px);
-			-ms-transform: translateY(0px);
-			-o-transform: translateY(0px);
-			transform: translateY(0px);
-		}
-	}
+    @-moz-keyframes slide-in {
+        0% {
+            opacity: 0;
+            -webkit-transform: translateY(40px);
+            -moz-transform: translateY(40px);
+            -ms-transform: translateY(40px);
+            -o-transform: translateY(40px);
+            transform: translateY(40px);
+        }
+        30% {
+            opacity: 1;
+            -webkit-transform: translateY(0px);
+            -moz-transform: translateY(0px);
+            -ms-transform: translateY(0px);
+            -o-transform: translateY(0px);
+            transform: translateY(0px);
+        }
+    }
 
-	@keyframes slide-in {
-		0% {
-			opacity: 0;
-			-webkit-transform: translateY(40px);
-			-moz-transform: translateY(40px);
-			-ms-transform: translateY(40px);
-			-o-transform: translateY(40px);
-			transform: translateY(40px);
-		}
-		30% {
-			opacity: 1;
-			-webkit-transform: translateY(0px);
-			-moz-transform: translateY(0px);
-			-ms-transform: translateY(0px);
-			-o-transform: translateY(0px);
-			transform: translateY(0px);
-		}
-	}
+    @keyframes slide-in {
+        0% {
+            opacity: 0;
+            -webkit-transform: translateY(40px);
+            -moz-transform: translateY(40px);
+            -ms-transform: translateY(40px);
+            -o-transform: translateY(40px);
+            transform: translateY(40px);
+        }
+        30% {
+            opacity: 1;
+            -webkit-transform: translateY(0px);
+            -moz-transform: translateY(0px);
+            -ms-transform: translateY(0px);
+            -o-transform: translateY(0px);
+            transform: translateY(0px);
+        }
+    }
 
-	@-webkit-keyframes pulse {
-		0% {
-			-webkit-transform: scale(1);
-			-moz-transform: scale(1);
-			-ms-transform: scale(1);
-			-o-transform: scale(1);
-			transform: scale(1);
-		}
-		10% {
-			-webkit-transform: scale(1.1);
-			-moz-transform: scale(1.1);
-			-ms-transform: scale(1.1);
-			-o-transform: scale(1.1);
-			transform: scale(1.1);
-		}
-		20% {
-			-webkit-transform: scale(1);
-			-moz-transform: scale(1);
-			-ms-transform: scale(1);
-			-o-transform: scale(1);
-			transform: scale(1);
-		}
-	}
+    @-webkit-keyframes pulse {
+        0% {
+            -webkit-transform: scale(1);
+            -moz-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+        }
+        10% {
+            -webkit-transform: scale(1.1);
+            -moz-transform: scale(1.1);
+            -ms-transform: scale(1.1);
+            -o-transform: scale(1.1);
+            transform: scale(1.1);
+        }
+        20% {
+            -webkit-transform: scale(1);
+            -moz-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+        }
+    }
 
-	@-moz-keyframes pulse {
-		0% {
-			-webkit-transform: scale(1);
-			-moz-transform: scale(1);
-			-ms-transform: scale(1);
-			-o-transform: scale(1);
-			transform: scale(1);
-		}
-		10% {
-			-webkit-transform: scale(1.1);
-			-moz-transform: scale(1.1);
-			-ms-transform: scale(1.1);
-			-o-transform: scale(1.1);
-			transform: scale(1.1);
-		}
-		20% {
-			-webkit-transform: scale(1);
-			-moz-transform: scale(1);
-			-ms-transform: scale(1);
-			-o-transform: scale(1);
-			transform: scale(1);
-		}
-	}
+    @-moz-keyframes pulse {
+        0% {
+            -webkit-transform: scale(1);
+            -moz-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+        }
+        10% {
+            -webkit-transform: scale(1.1);
+            -moz-transform: scale(1.1);
+            -ms-transform: scale(1.1);
+            -o-transform: scale(1.1);
+            transform: scale(1.1);
+        }
+        20% {
+            -webkit-transform: scale(1);
+            -moz-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+        }
+    }
 
-	@keyframes pulse {
-		0% {
-			-webkit-transform: scale(1);
-			-moz-transform: scale(1);
-			-ms-transform: scale(1);
-			-o-transform: scale(1);
-			transform: scale(1);
-		}
-		10% {
-			-webkit-transform: scale(1.1);
-			-moz-transform: scale(1.1);
-			-ms-transform: scale(1.1);
-			-o-transform: scale(1.1);
-			transform: scale(1.1);
-		}
-		20% {
-			-webkit-transform: scale(1);
-			-moz-transform: scale(1);
-			-ms-transform: scale(1);
-			-o-transform: scale(1);
-			transform: scale(1);
-		}
-	}
+    @keyframes pulse {
+        0% {
+            -webkit-transform: scale(1);
+            -moz-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+        }
+        10% {
+            -webkit-transform: scale(1.1);
+            -moz-transform: scale(1.1);
+            -ms-transform: scale(1.1);
+            -o-transform: scale(1.1);
+            transform: scale(1.1);
+        }
+        20% {
+            -webkit-transform: scale(1);
+            -moz-transform: scale(1);
+            -ms-transform: scale(1);
+            -o-transform: scale(1);
+            transform: scale(1);
+        }
+    }
 
-	.dropzone, .dropzone * {
-		box-sizing: border-box;
-	}
+    .dropzone, .dropzone * {
+        box-sizing: border-box;
+    }
 
-	.dropzone {
-		min-height: 150px;
-		border: 2px solid rgba(0, 0, 0, 0.3);
-		background: white;
-		padding: 20px 20px;
-	}
+    .dropzone {
+        min-height: 150px;
+        border: 2px solid rgba(0, 0, 0, 0.3);
+        background: white;
+        padding: 20px 20px;
+    }
 
-	.dropzone.dz-clickable {
-		cursor: pointer;
-	}
+    .dropzone.dz-clickable {
+        cursor: pointer;
+    }
 
-	.dropzone.dz-clickable * {
-		cursor: default;
-	}
+    .dropzone.dz-clickable * {
+        cursor: default;
+    }
 
-	.dropzone.dz-clickable .dz-message, .dropzone.dz-clickable .dz-message * {
-		cursor: pointer;
-	}
+    .dropzone.dz-clickable .dz-message, .dropzone.dz-clickable .dz-message * {
+        cursor: pointer;
+    }
 
-	.dropzone.dz-started .dz-message {
-		display: none;
-	}
+    .dropzone.dz-started .dz-message {
+        display: none;
+    }
 
-	.dropzone.dz-drag-hover {
-		border-style: solid;
-	}
+    .dropzone.dz-drag-hover {
+        border-style: solid;
+    }
 
-	.dropzone.dz-drag-hover .dz-message {
-		opacity: 0.5;
-	}
+    .dropzone.dz-drag-hover .dz-message {
+        opacity: 0.5;
+    }
 
-	.dropzone .dz-message {
-		text-align: center;
-		margin: 2em 0;
-	}
+    .dropzone .dz-message {
+        text-align: center;
+        margin: 2em 0;
+    }
 
-	.dropzone .dz-preview {
-		position: relative;
-		display: inline-block;
-		vertical-align: top;
-		margin: 16px;
-		min-height: 100px;
-	}
+    .dropzone .dz-preview {
+        position: relative;
+        display: inline-block;
+        vertical-align: top;
+        margin: 16px;
+        min-height: 100px;
+    }
 
-	.dropzone .dz-preview:hover {
-		z-index: 1000;
-	}
+    .dropzone .dz-preview:hover {
+        z-index: 1000;
+    }
 
-	.dropzone .dz-preview:hover .dz-details {
-		opacity: 1;
-	}
+    .dropzone .dz-preview:hover .dz-details {
+        opacity: 1;
+    }
 
-	.dropzone .dz-preview.dz-file-preview .dz-image {
-		border-radius: 20px;
-		background: #999;
-		background: linear-gradient(to bottom, #eee, #ddd);
-	}
+    .dropzone .dz-preview.dz-file-preview .dz-image {
+        border-radius: 20px;
+        background: #999;
+        background: linear-gradient(to bottom, #eee, #ddd);
+    }
 
-	.dropzone .dz-preview.dz-file-preview .dz-details {
-		opacity: 1;
-	}
+    .dropzone .dz-preview.dz-file-preview .dz-details {
+        opacity: 1;
+    }
 
-	.dropzone .dz-preview.dz-image-preview {
-		background: white;
-	}
+    .dropzone .dz-preview.dz-image-preview {
+        background: white;
+    }
 
-	.dropzone .dz-preview.dz-image-preview .dz-details {
-		-webkit-transition: opacity 0.2s linear;
-		-moz-transition: opacity 0.2s linear;
-		-ms-transition: opacity 0.2s linear;
-		-o-transition: opacity 0.2s linear;
-		transition: opacity 0.2s linear;
-	}
+    .dropzone .dz-preview.dz-image-preview .dz-details {
+        -webkit-transition: opacity 0.2s linear;
+        -moz-transition: opacity 0.2s linear;
+        -ms-transition: opacity 0.2s linear;
+        -o-transition: opacity 0.2s linear;
+        transition: opacity 0.2s linear;
+    }
 
-	.dropzone .dz-preview .dz-remove {
-		font-size: 14px;
-		text-align: center;
-		display: block;
-		cursor: pointer;
-		border: none;
-	}
+    .dropzone .dz-preview .dz-remove {
+        font-size: 14px;
+        text-align: center;
+        display: block;
+        cursor: pointer;
+        border: none;
+    }
 
-	.dropzone .dz-preview .dz-remove:hover {
-		text-decoration: underline;
-	}
+    .dropzone .dz-preview .dz-remove:hover {
+        text-decoration: underline;
+    }
 
-	.dropzone .dz-preview:hover .dz-details {
-		opacity: 1;
-	}
+    .dropzone .dz-preview:hover .dz-details {
+        opacity: 1;
+    }
 
-	.dropzone .dz-preview .dz-details {
-		z-index: 20;
-		position: absolute;
-		top: 0;
-		left: 0;
-		opacity: 0;
-		font-size: 13px;
-		min-width: 100%;
-		max-width: 100%;
-		padding: 2em 1em;
-		text-align: center;
-		color: rgba(0, 0, 0, 0.9);
-		line-height: 150%;
-	}
+    .dropzone .dz-preview .dz-details {
+        z-index: 20;
+        position: absolute;
+        top: 0;
+        left: 0;
+        opacity: 0;
+        font-size: 13px;
+        min-width: 100%;
+        max-width: 100%;
+        padding: 2em 1em;
+        text-align: center;
+        color: rgba(0, 0, 0, 0.9);
+        line-height: 150%;
+    }
 
-	.dropzone .dz-preview .dz-details .dz-size {
-		margin-bottom: 1em;
-		font-size: 16px;
-	}
+    .dropzone .dz-preview .dz-details .dz-size {
+        margin-bottom: 1em;
+        font-size: 16px;
+    }
 
-	.dropzone .dz-preview .dz-details .dz-filename {
-		white-space: nowrap;
-	}
+    .dropzone .dz-preview .dz-details .dz-filename {
+        white-space: nowrap;
+    }
 
-	.dropzone .dz-preview .dz-details .dz-filename:hover span {
-		border: 1px solid rgba(200, 200, 200, 0.8);
-		background-color: rgba(255, 255, 255, 0.8);
-	}
+    .dropzone .dz-preview .dz-details .dz-filename:hover span {
+        border: 1px solid rgba(200, 200, 200, 0.8);
+        background-color: rgba(255, 255, 255, 0.8);
+    }
 
-	.dropzone .dz-preview .dz-details .dz-filename:not(:hover) {
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
+    .dropzone .dz-preview .dz-details .dz-filename:not(:hover) {
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 
-	.dropzone .dz-preview .dz-details .dz-filename:not(:hover) span {
-		border: 1px solid transparent;
-	}
+    .dropzone .dz-preview .dz-details .dz-filename:not(:hover) span {
+        border: 1px solid transparent;
+    }
 
-	.dropzone .dz-preview .dz-details .dz-filename span, .dropzone .dz-preview .dz-details .dz-size span {
-		background-color: rgba(255, 255, 255, 0.4);
-		padding: 0 0.4em;
-		border-radius: 3px;
-	}
+    .dropzone .dz-preview .dz-details .dz-filename span, .dropzone .dz-preview .dz-details .dz-size span {
+        background-color: rgba(255, 255, 255, 0.4);
+        padding: 0 0.4em;
+        border-radius: 3px;
+    }
 
-	.dropzone .dz-preview:hover .dz-image img {
-		-webkit-transform: scale(1.05, 1.05);
-		-moz-transform: scale(1.05, 1.05);
-		-ms-transform: scale(1.05, 1.05);
-		-o-transform: scale(1.05, 1.05);
-		transform: scale(1.05, 1.05);
-		-webkit-filter: blur(8px);
-		filter: blur(8px);
-	}
+    .dropzone .dz-preview:hover .dz-image img {
+        -webkit-transform: scale(1.05, 1.05);
+        -moz-transform: scale(1.05, 1.05);
+        -ms-transform: scale(1.05, 1.05);
+        -o-transform: scale(1.05, 1.05);
+        transform: scale(1.05, 1.05);
+        -webkit-filter: blur(8px);
+        filter: blur(8px);
+    }
 
-	.dropzone .dz-preview .dz-image {
-		border-radius: 20px;
-		overflow: hidden;
-		width: 120px;
-		height: 120px;
-		position: relative;
-		display: block;
-		z-index: 10;
-	}
+    .dropzone .dz-preview .dz-image {
+        border-radius: 20px;
+        overflow: hidden;
+        width: 120px;
+        height: 120px;
+        position: relative;
+        display: block;
+        z-index: 10;
+    }
 
-	.dropzone .dz-preview .dz-image img {
-		display: block;
-	}
+    .dropzone .dz-preview .dz-image img {
+        display: block;
+    }
 
-	.dropzone .dz-preview.dz-success .dz-success-mark {
-		-webkit-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
-		-moz-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
-		-ms-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
-		-o-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
-		animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
-	}
+    .dropzone .dz-preview.dz-success .dz-success-mark {
+        -webkit-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
+        -moz-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
+        -ms-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
+        -o-animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
+        animation: passing-through 3s cubic-bezier(0.77, 0, 0.175, 1);
+    }
 
-	.dropzone .dz-preview.dz-error .dz-error-mark {
-		opacity: 1;
-		-webkit-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
-		-moz-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
-		-ms-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
-		-o-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
-		animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
-	}
+    .dropzone .dz-preview.dz-error .dz-error-mark {
+        opacity: 1;
+        -webkit-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
+        -moz-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
+        -ms-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
+        -o-animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
+        animation: slide-in 3s cubic-bezier(0.77, 0, 0.175, 1);
+    }
 
-	.dropzone .dz-preview .dz-success-mark, .dropzone .dz-preview .dz-error-mark {
-		pointer-events: none;
-		opacity: 0;
-		z-index: 500;
-		position: absolute;
-		display: block;
-		top: 50%;
-		left: 50%;
-		margin-left: -27px;
-		margin-top: -27px;
-	}
+    .dropzone .dz-preview .dz-success-mark, .dropzone .dz-preview .dz-error-mark {
+        pointer-events: none;
+        opacity: 0;
+        z-index: 500;
+        position: absolute;
+        display: block;
+        top: 50%;
+        left: 50%;
+        margin-left: -27px;
+        margin-top: -27px;
+    }
 
-	.dropzone .dz-preview .dz-success-mark svg, .dropzone .dz-preview .dz-error-mark svg {
-		display: block;
-		width: 54px;
-		height: 54px;
-	}
+    .dropzone .dz-preview .dz-success-mark svg, .dropzone .dz-preview .dz-error-mark svg {
+        display: block;
+        width: 54px;
+        height: 54px;
+    }
 
-	.dropzone .dz-preview.dz-processing .dz-progress {
-		opacity: 1;
-		-webkit-transition: all 0.2s linear;
-		-moz-transition: all 0.2s linear;
-		-ms-transition: all 0.2s linear;
-		-o-transition: all 0.2s linear;
-		transition: all 0.2s linear;
-	}
+    .dropzone .dz-preview.dz-processing .dz-progress {
+        opacity: 1;
+        -webkit-transition: all 0.2s linear;
+        -moz-transition: all 0.2s linear;
+        -ms-transition: all 0.2s linear;
+        -o-transition: all 0.2s linear;
+        transition: all 0.2s linear;
+    }
 
-	.dropzone .dz-preview.dz-complete .dz-progress {
-		opacity: 0;
-		-webkit-transition: opacity 0.4s ease-in;
-		-moz-transition: opacity 0.4s ease-in;
-		-ms-transition: opacity 0.4s ease-in;
-		-o-transition: opacity 0.4s ease-in;
-		transition: opacity 0.4s ease-in;
-	}
+    .dropzone .dz-preview.dz-complete .dz-progress {
+        opacity: 0;
+        -webkit-transition: opacity 0.4s ease-in;
+        -moz-transition: opacity 0.4s ease-in;
+        -ms-transition: opacity 0.4s ease-in;
+        -o-transition: opacity 0.4s ease-in;
+        transition: opacity 0.4s ease-in;
+    }
 
-	.dropzone .dz-preview:not(.dz-processing) .dz-progress {
-		-webkit-animation: pulse 6s ease infinite;
-		-moz-animation: pulse 6s ease infinite;
-		-ms-animation: pulse 6s ease infinite;
-		-o-animation: pulse 6s ease infinite;
-		animation: pulse 6s ease infinite;
-	}
+    .dropzone .dz-preview:not(.dz-processing) .dz-progress {
+        -webkit-animation: pulse 6s ease infinite;
+        -moz-animation: pulse 6s ease infinite;
+        -ms-animation: pulse 6s ease infinite;
+        -o-animation: pulse 6s ease infinite;
+        animation: pulse 6s ease infinite;
+    }
 
-	.dropzone .dz-preview .dz-progress {
-		opacity: 1;
-		z-index: 1000;
-		pointer-events: none;
-		position: absolute;
-		height: 16px;
-		left: 50%;
-		top: 50%;
-		margin-top: -8px;
-		width: 80px;
-		margin-left: -40px;
-		background: rgba(255, 255, 255, 0.9);
-		-webkit-transform: scale(1);
-		border-radius: 8px;
-		overflow: hidden;
-	}
+    .dropzone .dz-preview .dz-progress {
+        opacity: 1;
+        z-index: 1000;
+        pointer-events: none;
+        position: absolute;
+        height: 16px;
+        left: 50%;
+        top: 50%;
+        margin-top: -8px;
+        width: 80px;
+        margin-left: -40px;
+        background: rgba(255, 255, 255, 0.9);
+        -webkit-transform: scale(1);
+        border-radius: 8px;
+        overflow: hidden;
+    }
 
-	.dropzone .dz-preview .dz-progress .dz-upload {
-		background: #333;
-		background: linear-gradient(to bottom, #666, #444);
-		position: absolute;
-		top: 0;
-		left: 0;
-		bottom: 0;
-		width: 0;
-		-webkit-transition: width 300ms ease-in-out;
-		-moz-transition: width 300ms ease-in-out;
-		-ms-transition: width 300ms ease-in-out;
-		-o-transition: width 300ms ease-in-out;
-		transition: width 300ms ease-in-out;
-	}
+    .dropzone .dz-preview .dz-progress .dz-upload {
+        background: #333;
+        background: linear-gradient(to bottom, #666, #444);
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 0;
+        -webkit-transition: width 300ms ease-in-out;
+        -moz-transition: width 300ms ease-in-out;
+        -ms-transition: width 300ms ease-in-out;
+        -o-transition: width 300ms ease-in-out;
+        transition: width 300ms ease-in-out;
+    }
 
-	.dropzone .dz-preview.dz-error .dz-error-message {
-		display: block;
-	}
+    .dropzone .dz-preview.dz-error .dz-error-message {
+        display: block;
+    }
 
-	.dropzone .dz-preview.dz-error:hover .dz-error-message {
-		opacity: 1;
-		pointer-events: auto;
-	}
+    .dropzone .dz-preview.dz-error:hover .dz-error-message {
+        opacity: 1;
+        pointer-events: auto;
+    }
 
-	.dropzone .dz-preview .dz-error-message {
-		pointer-events: none;
-		z-index: 1000;
-		position: absolute;
-		display: block;
-		display: none;
-		opacity: 0;
-		-webkit-transition: opacity 0.3s ease;
-		-moz-transition: opacity 0.3s ease;
-		-ms-transition: opacity 0.3s ease;
-		-o-transition: opacity 0.3s ease;
-		transition: opacity 0.3s ease;
-		border-radius: 8px;
-		font-size: 13px;
-		top: 130px;
-		left: -10px;
-		width: 140px;
-		background: #be2626;
-		background: linear-gradient(to bottom, #be2626, #a92222);
-		padding: 0.5em 1.2em;
-		color: white;
-	}
+    .dropzone .dz-preview .dz-error-message {
+        pointer-events: none;
+        z-index: 1000;
+        position: absolute;
+        display: block;
+        display: none;
+        opacity: 0;
+        -webkit-transition: opacity 0.3s ease;
+        -moz-transition: opacity 0.3s ease;
+        -ms-transition: opacity 0.3s ease;
+        -o-transition: opacity 0.3s ease;
+        transition: opacity 0.3s ease;
+        border-radius: 8px;
+        font-size: 13px;
+        top: 130px;
+        left: -10px;
+        width: 140px;
+        background: #be2626;
+        background: linear-gradient(to bottom, #be2626, #a92222);
+        padding: 0.5em 1.2em;
+        color: white;
+    }
 
-	.dropzone .dz-preview .dz-error-message:after {
-		content: '';
-		position: absolute;
-		top: -6px;
-		left: 64px;
-		width: 0;
-		height: 0;
-		border-left: 6px solid transparent;
-		border-right: 6px solid transparent;
-		border-bottom: 6px solid #be2626;
-	}
+    .dropzone .dz-preview .dz-error-message:after {
+        content: '';
+        position: absolute;
+        top: -6px;
+        left: 64px;
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-bottom: 6px solid #be2626;
+    }
 
 </style>

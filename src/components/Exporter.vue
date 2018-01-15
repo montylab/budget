@@ -65,7 +65,7 @@
 					this.dataIncome && (data.income = this.backup.data.income)
 				}
 
-				return JSON.stringify(data)
+				return JSON.stringify({...data, backup: true})
 			},
 		},
 
